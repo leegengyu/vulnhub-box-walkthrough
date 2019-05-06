@@ -10,8 +10,8 @@ By Josiah Pierce
 * From our Kali VM, execute `nmap -sS 192.168.110.135`.
 * There are 3 ports that are open: 21 (ftp), 22 (ssh) and 80 (http). These results are loaded instantly after the command is executed - scan result was previously cached(?).
 * We visit 192.168.110.135 and find a web server running. The page says that "It works!".
-* 1) Viewing the page source reveals no additional information.
-* 2) /admin, /login.php, /robots.txt are invalid pages as well.
+* Note: Viewing the page source reveals no additional information.
+* Note: /admin, /login.php, /robots.txt are invalid pages as well.
 * Though the page also said that "no content has been added yet", we cannot necessarily trust it. Thus, run `dirbuster`, which tries to find hidden files and directories using a user-supplied wordlist.
 * Put 192.168.110.135 into the `Target URL` of dirbuster. We will use a wordlist that is provided by dirbuster, which can be found in /usr/share/dirbuster/wordlists. We will use `directory-list-lowercase-2.3-small.txt` for a start. We will also use `30 threads`.
 * While waiting for dirbuster to do its job, we will look at other areas, such as verifying that it is indeed the ssh service which is running at port 22. Since there is a response that requests for the password, we can confirm that it is indeed the case.
