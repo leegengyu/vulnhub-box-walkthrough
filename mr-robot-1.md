@@ -17,12 +17,12 @@ Walkthrough:
 * uniscan vs. dirbuster: *to-be-added*
 * From the scan results, we see that the site is running on WordPress, given the many specific references: wp-includes, wp-admin, wp-content directories and a bunch of external hosts that have to do with WordPress resources.
 * Since there is a robots.txt found from the scan, open it and we see that there are 2 files listed: fsocity.dic (dictionary) and key-1-of-3.txt.
-* Execute wget 192.168.153.174/key-1-of-3.txt to download the text file to our Kali VM, and do the same thing with the .dic file.
+* Run `wget 192.168.153.174/key-1-of-3.txt` to download the text file to our Kali VM, and do the same thing with the .dic file.
 * key-1-of-3.txt contains a string (`073403c8a58a1f80d943455fb30724b9`): after running hash-identifer against it, we know that it could be a MD5 hash. We also know that the .dic file appears to be a wordlist.
 * Head to the wp-login section of the WordPress site on our browser, for which we have to get the credentials to. After which, we can get a reverse shell.
 * Insert a random parameter string at the end of the site (e.g. `/imag`), in order to get the error message that the site does not exist. This is one way for us to see the actual WordPress site instead of the interactive-style site that greeted us (which did not quite show us how we are able to escape that page to head to other pages of the site).
 * After getting to the WordPress site, we see that there is a user elliot, from the only post on the site titled "TestPOst". elliot is also likely to be a username to a WordPress account.
-* Run wpscan --url 192.168.153.174 --enumerate users to find out the usernames of other users on the WordPress site.
+* Run `wpscan --url 192.168.153.174 --enumerate users` to find out the usernames of other users on the WordPress site.
 * wpscan: a black box WordPress vulnerability scanner. *to-be-continued*
 * Head to the WordPress login site and attempt to login with a random password for the username `elliot`. There is an error stating that the password for elliot is incorrect. Thus, we now know that the username elliot indeed exists, and our next step is to brute-force the password for that account.
 * Run hydra 192.168.153.174 http-form-post "/wp-login.php:log=elliot&pwd=^PASS^:ERROR" -l elliot -P /tut/fsocity.dic -t 10 -w 30
