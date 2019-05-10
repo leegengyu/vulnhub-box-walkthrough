@@ -20,7 +20,7 @@ By Leon Johnson
 * Next, we will use `uniscan` which is a Remote File Include, Local File Include and Remote Command Execution vulnerability scanner. -q enables directory checks, -w enables file checks and -e enables robots.txt and sitemap.xml check.
 * Run `uniscan -u 10.0.2.5 -qwe`:
 ![](/screenshots/mr-robot-1/uniscanResults.jpg)
-* uniscan vs. dirbuster: *to-be-added*
+* Note: In the previous walkthrough on basic-pentesting-1, we used `dirbuster`, but here we are using `uniscan` which has other kinds of checks such as static and dynamic ones that the former does not have.
 * From the scan results, we see that the site is running on WordPress, since the directory checks included links that ended with `wp-`.
 * There is a robots.txt found from the scan's file checks. Open it and we see that there are 2 files listed: `fsocity.dic` and `key-1-of-3.txt`. The former is an unordered dictionary wordlist, while the latter reveals a string: `073403c8a58a1f80d943455fb30724b9`.
 * It is likely that the dictionary file will be required for some sort of bruteforce attack later.
