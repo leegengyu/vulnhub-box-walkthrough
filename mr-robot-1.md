@@ -63,7 +63,8 @@ Explanation of how the `hydra` command works:
 * Run `hydra -V -l elliot -P fsocity2.dic 10.0.2.5 http-post-form '/wp-login.php:log=elliot&pwd=^PASS^:ERROR'`.
 * Note-to-self: Not sure why, but we cannot seem to use `hydra` to crack the password of `elliot`. We will always get 0 valid passwords. I suspect that it is due to the fact that it takes awhile for the page to transit to the wp-admin page after a successful login, and thus, it is considered an unsuccessful attempt. In light of this, I added additional parameters `-t 1 -c 10`, which makes hydra run only 1 connect at any point in time, and for the wait time to be 10 seconds per login attempt, but to no avail.
 
-* We will use `wpscan` to brute-force the password for user Elliot: run `wpscan --url 10.0.2.5 --usernames elliot --passwords fsocity2.dic`:
+# Brute-force elliot's password using wpscan #
+* Use `wpscan` instead to brute-force the password for user elliot: run `wpscan --url 10.0.2.5 --usernames elliot --passwords fsocity2.dic`:
 ![](/screenshots/mr-robot-1/wpScanBruteForcePassword.jpg)
 * It took only around half a minute, which is way faster than any attempts using `hydra`.
 * Note: If you were to run the same command again, you would get the results almost instantly, i.e. results were very likely to have been cached.
