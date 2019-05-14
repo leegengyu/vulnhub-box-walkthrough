@@ -7,8 +7,8 @@ By Fatih Çelik
 ![](/screenshots/hackinos-1/vulnerableVMIPAddress.jpg)
 * From our Kali VM, run `nmap -p- -A 10.0.2.15`, scanning all ports, and enabling OS detection, version detection, script scanning, and traceroute:
 ![](/screenshots/hackinos-1/scanAllPortsandServiceVersions.jpg)
-* There are 2 ports that are open: 22 (ssh) and 8000 (http). Typically, the HTTP service is run on port 80, but I guess the point of having it on a different port on this vulnerable VM is to test us.
-* We also see that there is a robots.txt file for the web server that states the disallow entries: `/uploads` and `upload.php`. We will use this piece of information later in the walkthrough.
+* There are 2 ports that are open: `22 (ssh)` and `8000 (http)`. Typically, the HTTP service is run on port 80, but I guess the point of having it on a different port on this vulnerable VM is to test us.
+* We also see that there is a `robots.txt` file for the web server that states the disallow entries: `/uploads` and `upload.php`. We will use this piece of information later in the walkthrough.
 * *At this point, I am not sure if there is a vulnerability on the SSH service that we can exploit.* Hence, we will go ahead to explore the web service first.
 
 # HTTP service #
