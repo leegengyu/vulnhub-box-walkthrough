@@ -83,7 +83,7 @@ Explanation of how the `hydra` command works:
 * Using an online MD5 cracker page, we find that the password behind the hash is `abcdefghijklmnopqrstuvwxyz`.
 * We can login via the command-line that greeted us when we booted up the vulnerable VM:
 ![](/screenshots/mr-robot-1/directLogin.jpg)
-* Alternatively, we can execute `shell`, then get a terminal-shell using `python -c 'import pty; pty.spawn("/bin/bash")'`. After that, run `su robot` to switch user and enter the password we found above.
+* Alternatively, we can execute `shell`, then get an interactive shell using `python -c 'import pty; pty.spawn("/bin/bash")'`. After that, run `su robot` to switch user and enter the password we found above.
 * After logging in as robot, we find that we are able to open key-2-of-3.txt, which contains a string `822c73956184f694993bede3eb39f959`.
 * We have to now find the last key, which is likely to be in /root, since the only thing which we have yet to do is to gain root access. However, even after logging in as robot, we do not have the permission to navigate to /root.
 * We will do a privilege escalation here, using a binary which possess root privileges when they are executed (i.e. SUID executables).
