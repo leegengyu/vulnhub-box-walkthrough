@@ -8,7 +8,8 @@ By Fatih Çelik
 * From our Kali VM, run `nmap -p- -A 10.0.2.15`, scanning all ports, and enabling OS detection, version detection, script scanning, and traceroute:
 ![](/screenshots/hackinos-1/scanAllPortsandServiceVersions.jpg)
 * There are 2 ports that are open: 22 (ssh) and 8000 (http). Typically, the HTTP service is run on port 80, but I guess the point of having it on a different port on this vulnerable VM is to test us.
-* At this point, I am not sure if there is a vulnerability on the SSH service that we can exploit. Hence, we will go ahead to explore the web service first.
+* We also see that there is a robots.txt file for the web server that states the disallow entries: `/uploads` and `upload.php`. We will use this piece of information later in the walkthrough.
+* *At this point, I am not sure if there is a vulnerability on the SSH service that we can exploit.* Hence, we will go ahead to explore the web service first.
 
 # HTTP service #
 * We visit `10.0.2.15` and find a web server running, with the rendered page broken:
@@ -23,9 +24,7 @@ By Fatih Çelik
 * We see that there is a comment on the only post, but the comment reveals nothing of concern:
 ![](/screenshots/hackinos-1/wordPressPost.jpg)
 * Head to the `/wp-login.php` page to confirm that there is indeed a WordPress account with the username `Handsome_Container`. At the same time, we find out that there is no account with the username `admin`.
-
-* Run `uniscan` against the web server, and we find that there is a `robot.txt` file that states the disallow entries: `/uploads` and `upload.php`:
-![](/screenshots/hackinos-1/uniscanResults.jpg)
+* The next part which we will explore is the directory `/uploads` and file `upload.php`, which was discovered in our `nmap` scan earlier on.
 * Heading to `upload.php`, we see a basic upload page that appears to allow users to upload image files:
 ![](/screenshots/hackinos-1/uploadPage.jpg)
 * Clicking on the `Browse` button, it appears that we are able to upload files of any type.
@@ -59,7 +58,7 @@ for ($i = 1; $i <= 100; $i++) {
 
 * Note: This code needs to be modified according to your file name. The file name used in this case is `index.php`.
 * Next, run `php generateMD5Hashes.php > output.txt`, which redirects the output to a text file instead of the terminal screen.
-* Note: Interestingly, inserting the newline ending immediately after the MD5 function (which gives us only 1 line of echo statement) results in only 1 long line of output. Additionally, I got the warning `A non-numeric value encountered in ...`. The PHP version used is `7.3.4-2 (cli)`. Not exactly sure why this does not work. Here is a relevant [StackOverflow article](https://stackoverflow.com/questions/42044127/warning-a-non-numeric-value-encountered).
+* Note: Interestingly, inserting the newline ending immediately after the MD5 function (which gives us only 1 line of echo statement) results in only 1 long line of output. Additionally, I got the warning `A non-numeric value encountered in ...`. The PHP version used is `7.3.4-2 (cli)`. *Not exactly sure why this does not work*. Here is a relevant [StackOverflow article](https://stackoverflow.com/questions/42044127/warning-a-non-numeric-value-encountered).
 * Next, we wil use `wfuzz` (tool designed for brute-forcing web applications) to find out what is our uploaded file name for `index.png`.
 * Run `wfuzz -w output.txt --sc 200 http://localhost:8000/uploads/FUZZ.png`.
 * `-w` allows us to specify our wordlist. `--sc` allows us to filter for only responses with the specified code of 200 (i.e. 200 OK).
