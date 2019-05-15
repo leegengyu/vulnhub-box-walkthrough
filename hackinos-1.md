@@ -79,9 +79,22 @@ for ($i = 1; $i <= 100; $i++) {
 * Heading to `/var/www/html`, open `wp-config.php` and we find that the MySQL login credentials are `wordpress:wordpress`. *We will not make use of this information for this walkthrough at this iteration - to consider how we can use this for privilege escalation in future*.
 * Next, we will have to find a way for privilege escalation, using a binary with the setuid bit enabled. Run `find / -user root -perm -4000 -print 2>/dev/null`, just like in mr-robot-1:
 ![](/screenshots/hackinos-1/suidExecutables.jpg)
-* Amongst these binaries, we will use `/usr/bin/tail` to escalate our privileges: `tail -c1G /etc/shadow`, where `tail` allows us to output the final parts of a file.
+* Amongst these binaries, we will use `/usr/bin/tail` to escalate our privileges: `tail -c1G /etc/shadow`, where `tail` allows us to output the final parts of a file:
+![](/screenshots/hackinos-1/tailShadowFile.jpg)
 * Note: `-c1G` allows us to view the entire file, because the information that we need is found on the first line.
 * The encrypted password of `root` is `$6$qoj6/JJi$FQe/BZlfZV9VX8m0i25Suih5vi1S//OVNpd.PvEVYcL1bWSrF3XTVTF91n60yUuUMUcP65EgT8HfjLyjGHova/`.
+* We will use `john` to decrypt the encrypted password. Before using john, we will first insert the encrypted password into a stand-alone file, which I have named as `decryptthis.txt`. Next, we will run `john --wordlist=/usr/share/john/password.lst decryptthis.txt`:
+![](/screenshots/hackinos-1/johnCracking.jpg)
+* Note: The wordlist used is one of those that comes with the installation of `john`. If you were to open the list, it states that the list is based on passwords most commonly seen on a set of Unix system in mid-1990's, sorted for decreasing number of occurences. The last update to the list is in end-2011, with 3546 entries.
+* The cracking process is done almost instantaneously, giving us the password as `john`.
+* Note: Running the `john` command again will not result in the cracking process being re-run:
+![](/screenshots/hackinos-1/johnRerun.jpg)
+* Note: If you want to re-run the command to observe the process again, go to `.john` and delete `john.pot`.
+* Note: If you want to view the password again without repeating the above process, execute `john --show decryptthis.txt` (replacing the last part with your file name).
+* Now that we have our password, we will spawn our interactive shell with `python -c 'import pty; pty.spawn("/bin/bash")'`, then run `su`, entering the password `john`.
+* Next, we head to `/root`, and find that there is a file `flag`. However, that file only reveals to us a cryptic message, instead of the actual flag:
+![](/screenshots/hackinos-1/flagInitial.jpg)
+* We have already gotten root access, but the flag still eludes us: we will have to find the flag elsewhere.
 * To-be-continued...
 
 # To-be-added subsequently #
