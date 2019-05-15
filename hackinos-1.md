@@ -92,9 +92,14 @@ for ($i = 1; $i <= 100; $i++) {
 * Note: If you want to re-run the command to observe the process again, go to `.john` and delete `john.pot`.
 * Note: If you want to view the password again without repeating the above process, execute `john --show decryptthis.txt` (replacing the last part with your file name).
 * Now that we have our password, we will spawn our interactive shell with `python -c 'import pty; pty.spawn("/bin/bash")'`, then run `su`, entering the password `john`.
-* Next, we head to `/root`, and find that there is a file `flag`. However, that file only reveals to us a cryptic message, instead of the actual flag:
+* Next, we head to `/root`, and find that there is a file `flag`. However, that file only reveals to us a cryptic message, instead of the actual flag (I think?):
 ![](/screenshots/hackinos-1/flagInitial.jpg)
 * We have already gotten root access, but the flag still eludes us: we will have to find the flag elsewhere.
+* Opening up the other files on `/root` directory, the file `.port` holds another cryptic message as well. Have not much of an idea what the `7*` means as well.
+* I went back to the login page of the vulnerable VM, and checked for the username `hummingbirdscyber` against the `/etc/shadow` file, and did not find the username on the list. It seems like the username belongs to an account on another service of the vulnerable VM.
+* Running `ipconfig` on our vulnerable VM shows that the internal IP address is `172.18.0.3`:
+![](/screenshots/hackinos-1/vulnerableVMNetwork.jpg)
+
 * To-be-continued...
 
 # To-be-added subsequently #
