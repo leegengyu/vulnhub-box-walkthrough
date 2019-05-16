@@ -52,4 +52,5 @@ By DCAU
 * Note: You can also run the same `find` command with an existing file name (typed out in file including the file extension). The directory that I was in had a bunch of files, the first of which is `COPYRIGHT.txt`. Just add this file name after `find` and before `-exec`. However, this command will not work with a non-existent file name, or if the file extension is missing.
 * We are now `root`. To get our flag, we head to `/root`, and open `thefinalflag.txt`:
 ![](/screenshots/dc-1/thefinalflag.jpg)
-* Hurray!
+* Note: Running `exit` to terminate our root shell seems to have no effect at all. I could only send a terminate signal (CTRL + C) to the channel, which sends us straight back to our meterpreter terminal.
+* Hurray, that is the end of this challenge!
