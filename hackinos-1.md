@@ -96,7 +96,7 @@ for ($i = 1; $i <= 100; $i++) {
 ![](/screenshots/hackinos-1/flagInitial.jpg)
 * We have already gotten root access, but the flag still eludes us: we will have to find the flag elsewhere.
 * Opening up the other files on `/root` directory, the file `.port` holds another cryptic message as well. Have not much of an idea what the `7*` means as well.
-* I went back to the login page of the vulnerable VM, and checked for the username `hummingbirdscyber` against the `/etc/shadow` file, and did not find the username on the list. It seems like the username belongs to an account on another service of the vulnerable VM.
+* I went back to the login page of the vulnerable VM (that we had encountered initially), and checked for the username `hummingbirdscyber` against the `/etc/shadow` file, and did not find the username on the list. It seems like the username belongs to an account on another service of the vulnerable VM.
 * Running `ipconfig` on our vulnerable VM shows that the internal IP address is `172.18.0.3`:
 ![](/screenshots/hackinos-1/vulnerableVMNetwork.jpg)
 
