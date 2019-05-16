@@ -3,23 +3,23 @@
 By Fatih Çelik
 
 * As with [Basic Pentesting: 1](https://github.com/leegengyu/CTF-Walkthrough/blob/master/basic-pentesting-1.md), after the victim VM has been booted up, we are greeted with a login page that requests for the password of user `hummingbirdscyber`. We attempt a few common passwords such as `password` and `admin`, but we do not manage to login as expected.
-* The IP address of the victim VM can be found by clicking the icon with 2 arrows pointing up and down respectively on the top right-hand corner of the login page, which is `10.0.2.15`.
+* The IP address of the victim VM can be found by clicking the icon with 2 arrows pointing up and down respectively on the top right-hand corner of the login page, which is `10.0.2.6`.
 ![](/screenshots/hackinos-1/vulnerableVMIPAddress.jpg)
-* From our Kali VM, run `nmap -p- -A 10.0.2.15`, scanning all ports, and enabling OS detection, version detection, script scanning, and traceroute:
+* From our Kali VM, run `nmap -p- -A 10.0.2.6`, scanning all ports, and enabling OS detection, version detection, script scanning, and traceroute:
 ![](/screenshots/hackinos-1/scanAllPortsandServiceVersions.jpg)
 * There are 2 ports that are open: `22 (ssh)` and `8000 (http)`. Typically, the HTTP service is run on port 80, but I guess the point of having it on a different port on this vulnerable VM is to test us.
 * We also see that there is a `robots.txt` file for the web server that states the disallow entries: `/uploads` and `upload.php`. We will use this piece of information later in the walkthrough.
 * *At this point, I am not sure if there is a vulnerability on the SSH service that we can exploit.* Hence, we will go ahead to explore the web service first.
 
 # HTTP service #
-* We visit `10.0.2.15` and find a web server running, with the rendered page broken:
+* We visit `10.0.2.6` and find a web server running, with the rendered page broken:
 ![](/screenshots/hackinos-1/httpServicePage.jpg)
-* Hovering our mouse over the `Log in` hyperlink under the `Meta` section shows us that the domain name is expected to be localhost running on port 8000. instead of 10.0.2.15. `localhost` does not resolve to 10.0.2.15, but to 127.0.1.1 instead (see below) hence the broken page.
+* Hovering our mouse over the `Log in` hyperlink under the `Meta` section shows us that the domain name is expected to be localhost running on port 8000. instead of 10.0.2.6. `localhost` does not resolve to 10.0.2.6, but to 127.0.1.1 instead (see below) hence the broken page.
 ![](/screenshots/hackinos-1/httpServicePageHover.jpg)
 * To resolve this issue, edit our `/etc/hosts` file accordingly:
 ![](/screenshots/hackinos-1/hostsFileEntries.jpg)
 * Note: The commented-out line for the localhost entry that maps to 127.0.1.1 is deliberate so that we can add back this entry after we are done with this challenge, since that was the original entry in the file.
-* Reload `10.0.2.15` to see the intended layout of the page. There is only 1 post in the entire WordPress site by user `Handsome_Container`:
+* Reload `10.0.2.6` to see the intended layout of the page. There is only 1 post in the entire WordPress site by user `Handsome_Container`:
 ![](/screenshots/hackinos-1/wordPressProperLoad.jpg)
 * We see that there is a comment on the only post, but the comment reveals nothing of concern:
 ![](/screenshots/hackinos-1/wordPressPost.jpg)
@@ -48,19 +48,18 @@ By Fatih Çelik
 <?php
 
 for ($i = 1; $i <= 100; $i++) {
-	echo md5("index.png" + $i);
+	echo md5("index.png" . $i);
 	echo "\n";
 }
 
 ?>
 ```
 * The code acts like a script (using a for-loop) prints a MD5 hash on each line, with the file name and a random number being hashed.
-
-* Note: This code needs to be modified according to your file name. The file name used in this case is `index.php`.
-* Next, run `php generateMD5Hashes.php > output.txt`, which redirects the output to a text file instead of the terminal screen.
+* Note: This code needs to be modified according to your file name. The file name used in this case is `index.png`, since I had uploaded such a file earlier on.
+* Next, run `php generateMD5Hashes.php > MD5HashesList.txt`, which redirects the output to a text file instead of the terminal screen.
 * Note: Interestingly, inserting the newline ending immediately after the MD5 function (which gives us only 1 line of echo statement) results in only 1 long line of output. Additionally, I got the warning `A non-numeric value encountered in ...`. The PHP version used is `7.3.4-2 (cli)`. *Not exactly sure why this does not work*. Here is a relevant [StackOverflow article](https://stackoverflow.com/questions/42044127/warning-a-non-numeric-value-encountered).
 * Next, we wil use `wfuzz` (tool designed for brute-forcing web applications) to find out what is our uploaded file name for `index.png`.
-* Run `wfuzz -w output.txt --sc 200 http://localhost:8000/uploads/FUZZ.png`.
+* Run `wfuzz -w MD5HashesList.txt --sc 200 http://localhost:8000/uploads/FUZZ.png`.
 * `-w` allows us to specify our wordlist. `--sc` allows us to filter for only responses with the specified code of 200 (i.e. 200 OK).
 * On the first column, we see the ID response, which shows that the random number used was 77:
 ![](/screenshots/hackinos-1/bruteForceResults.jpg)
@@ -69,8 +68,8 @@ for ($i = 1; $i <= 100; $i++) {
 * Since we have confirmed our ability to upload and open an image file onto the web server, we can then upload a malicious file and open it to gain a reverse shell on the web server.
 * We will use [php-reverse-shell](https://github.com/pentestmonkey/php-reverse-shell) by pentestmonkey. After cloning the git repository, open `php-reverse-shell.php` and change the values at lines 49 and 50, which is the IP address and port number respectively of our Kali VM. Use `ifconfig` to find out the former and just insert any number that you would like for the latter, so long as it is not already being used by another service. I will be using port 3000 here.
 * However, recall that our file type is restricted to only .png or .gif. One way that servers prevent shells from being uploaded is to restrict the file types of files that users can upload. Nonetheless, we can bypass this limitation by adding the text `GIF89a` or `GIF98` to the start of php-reverse-shell.php.
-* Note: Adding the allowed file extensions to our malicious file, e.g. malicious.php.png or malicious.php.gif does not work because the file type check is done by examining the file MIME (way to identify files according to nature and format) type, and not by splicing the entire string to get the file type.
-* After adding the text, upload the file (we have now bypassed the file extension filter) and then rinse and repeat using `wfuzz` as done previously to obtain the file name of our shell code. Mine is `6263d635867b1da16ef04b5d419a6fed`.
+* Note: Adding the allowed file extensions to our malicious file, e.g. `malicious.php.png` or `malicious.php.gif` does not work because the file type check is done by examining the file MIME (way to identify files according to nature and format) type, and not by splicing the entire string to get the file type.
+* After adding the text, upload `php-reverse-shell.php` (we have now bypassed the file extension filter) and then rinse and repeat using `wfuzz` as done previously to obtain the file name of our shell code: `wfuzz -w MD5HashesList.txt --sc 200 http://localhost:8000/uploads/FUZZ.php`. Mine is `6263d635867b1da16ef04b5d419a6fed`.
 * Before we open the malicious file on the web server which will initiate the connection back to our Kali VM at port 3000 (or whichever other port you used), we have to `nc` listener on our Kali VM: `nc -l -p 3000`.
 * `-l` is used to specify that nc listens to an incoming connection rather than initiating a connection to a remote host. `-p` is to specify the port number. `-v` can also be added if you would like a more verbose output, such as having the message that says that the listener is listening after running the command, versus no such message, i.e. nc is silently waiting.
 * After running that command, we now have a reverse shell on the vulnerable web server, as user `www-data`:
@@ -83,14 +82,14 @@ for ($i = 1; $i <= 100; $i++) {
 ![](/screenshots/hackinos-1/tailShadowFile.jpg)
 * Note: `-c1G` allows us to view the entire file, because the information that we need is found on the first line.
 * The encrypted password of `root` is `$6$qoj6/JJi$FQe/BZlfZV9VX8m0i25Suih5vi1S//OVNpd.PvEVYcL1bWSrF3XTVTF91n60yUuUMUcP65EgT8HfjLyjGHova/`.
-* We will use `john` to decrypt the encrypted password. Before using john, we will first insert the encrypted password into a stand-alone file, which I have named as `decryptthis.txt`. Next, we will run `john --wordlist=/usr/share/john/password.lst decryptthis.txt`:
+* We will use `john` to decrypt the encrypted password. Before using john, we will first insert the encrypted password into a stand-alone file, which I have named as `decryptThisPassword.txt`. Next, we will run `john --wordlist=/usr/share/john/password.lst decryptThisPassword.txt`:
 ![](/screenshots/hackinos-1/johnCracking.jpg)
 * Note: The wordlist used is one of those that comes with the installation of `john`. If you were to open the list, it states that the list is based on passwords most commonly seen on a set of Unix system in mid-1990's, sorted for decreasing number of occurences. The last update to the list is in end-2011, with 3546 entries.
 * The cracking process is done almost instantaneously, giving us the password as `john`.
 * Note: Running the `john` command again will not result in the cracking process being re-run:
 ![](/screenshots/hackinos-1/johnRerun.jpg)
 * Note: If you want to re-run the command to observe the process again, go to `.john` and delete `john.pot`.
-* Note: If you want to view the password again without repeating the above process, execute `john --show decryptthis.txt` (replacing the last part with your file name).
+* Note: If you want to view the password again without repeating the above process, execute `john --show decryptThisPassword.txt` (replacing the last part with your file name).
 * Now that we have our password, we will spawn our interactive shell with `python -c 'import pty; pty.spawn("/bin/bash")'`, then run `su`, entering the password `john`.
 * Next, we head to `/root`, and find that there is a file `flag`. However, that file only reveals to us a cryptic message, instead of the actual flag (I think?):
 ![](/screenshots/hackinos-1/flagInitial.jpg)
