@@ -18,6 +18,7 @@ By DCAU
 * Common login credentials such as `admin:admin` and `admin:password` do not work.
 * I tried a couple of passwords on the account with the username `admin`, with my attempts being spaced out over 3 hours, but I was greeted with this message on the most recent attempt:
 ![](/screenshots/dc-1/AccountTemporarilyBlocked.jpg)
+* Note: I found this [documentation page](https://www.drupal.org/node/1023440) by Drupal that states its policy on blocking logins after 5 failed login attempts, and how it is being recorded.
 * I guess that means that we can rule out brute-forcing attempts to get an account access.
 * At the same time, I found that the login page did not reveal any hints about whether the account (username) existed, with a failed attempt resulting in this error message:
 ![](/screenshots/dc-1/invalidLogin.jpg)
@@ -30,6 +31,12 @@ By DCAU
 * I did not attempt to visit all of them, but from my quick sampling, the directories forbidded access, while the pages gave an access-denied message too.
 * I went on to find out more about the CMS that ran the site, which is Drupal who is running on version 7. This was interesting for me because the previous vulnerable VMs were all running on WordPress.
 * I ran a quick Google search and found that Drupal 7 had various vulnerabilities that we could exploit.
+* To further identify what the version that the Drupal CMS was running on, we will be using `droopescan` ([GitHub link](https://github.com/droope/droopescan)).
+* Note: It appears that `droopescan` comes packaged with the Kali VM, as seen [here](https://en.kali.tools/all/?tool=371). I could not find it on mine, hence I will be installing it below:
+* After cloning the Git repository, enter the local folder and run `pip install -r requirements.txt`, where `-r` allows to refer to other requirement files as well.
+* Run `droopescan scan drupal -u http://10.0.2.7`:
+![](/screenshots/dc-1/droopescanResult.jpg)
+* We can see that the possible versions of the Drupal CMS is narrowed down to 7.22 - 7.26, though we do not have an exact hit.
 * Running `msfconsole`, I searched for modules pertaining to Drupal: `search drupal`:
 ![](/screenshots/dc-1/msfconsoleSearchResults.jpg)
 * We can either `use exploit/multi/http/drupal_drupageddon` or `use exploit/unix/webapp/drupal_drupalgeddon2`.
