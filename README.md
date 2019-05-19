@@ -5,3 +5,4 @@ This repository contains a list of CTFs/vulnerable virtual machines which I have
 2. Mr-Robot: 1 (Leon Johnson)
 3. HackInOS: 1 (Fatih Çelik)
 4. DC: 1 (DCAU)
+5. DC: 2 (DCAU)

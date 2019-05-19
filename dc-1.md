@@ -40,6 +40,8 @@ By DCAU
 * Running `msfconsole`, I searched for modules pertaining to Drupal: `search drupal`:
 ![](/screenshots/dc-1/msfconsoleSearchResults.jpg)
 * We can either `use exploit/multi/http/drupal_drupageddon` or `use exploit/unix/webapp/drupal_drupalgeddon2`.
+* According to Rapid7, the [former module](https://www.rapid7.com/db/modules/exploit/multi/http/drupal_drupageddon) exploits the Drupal HTTP Parameter Key/Value SQL Injection (aka Drupageddon) in order to achieve a remote shell on the vulnerable instance. It was tested against Drupal 7.0 and 7.31 (fixed in 7.32).
+* The [latter module](https://www.rapid7.com/db/modules/exploit/unix/webapp/drupal_drupalgeddon2) exploits a Drupal property injection in the Forms API. Drupal 6.x, < 7.58, 8.2.x, < 8.3.9, < 8.4.6, and < 8.5.1 are vulnerable.
 * Whichever module that we use, we would first `show options` to see what module option settings is required of us to set.
 * There are many parameters in both of the modules, but we would only have to edit RHOST (which is left empty initially): `set RHOST 10.0.2.7`.
 * Run show options again to confirm that we have the correct parameters set:
@@ -52,12 +54,13 @@ By DCAU
 * We will next be finding a list of binaries that have the setuid bit enabled on the vulnerable VM: run `find / -user root -perm -4000 -print 2>/dev/null`.
 ![](/screenshots/dc-1/suidExecutables.jpg)
 * Out of all the binaries returned as part of our `find` command, we will be using `/usr/bin/find`.
-* Normally, we will use the `find` command to search for files, but we will not be specifying any file names in our command (and it will not throw out the entire list of available files as well). Instead, we will use the `-exec` command, which will execute the command to spawn a shell, which turns out to give us `root`.
+* Normally, we will use the `find` command to search for files, but we will not be specifying any file names in our command (and it will not throw out the entire list of available files as well). Instead, we will use the `-exec` parameter, which will execute the command to spawn a shell, which turns out to give us `root`.
 * Run `find -exec "/bin/sh" \;`:
 ![](/screenshots/dc-1/findCommandPrivilegeEscalation.jpg)
+* How the command is constructed is that all following arguments to `find` are taken to be arguments to the command until an argument consisting of `;` is encountered. `\` is the escape character here to protect the semi-colon from expansion by the shell. This explanation is taken from the [Linux manual page](http://man7.org/linux/man-pages/man1/find.1.html)
 * Note: Using `/bin/bash` instead will result in a non-root shell. This has nothing to do with the fact that we spawned an interactive TTY `/bin/bash` shell earlier on. I tried to set the TTY shell to `/bin/sh`, but having `/bin/bash` at this point still results in a non-root shell. I suspect that this has to do with existing .bash setting files.
 * Note: You can also run the same `find` command with an existing file name (typed out in file including the file extension). The directory that I was in had a bunch of files, the first of which is `COPYRIGHT.txt`. Just add this file name after `find` and before `-exec`. However, this command will not work with a non-existent file name, or if the file extension is missing.
-* We are now `root`. To get our flag, we head to `/root`, and open `thefinalflag.txt`:
+* We are now `root`. To get our final flag, we head to `/root`, and open `thefinalflag.txt`:
 ![](/screenshots/dc-1/thefinalflag.jpg)
 * Note: Running `exit` to terminate our root shell seems to have no effect at all. I could only send a terminate signal (CTRL + C) to the channel, which sends us straight back to our meterpreter terminal.
 * Hurray, that is the end of this challenge!
