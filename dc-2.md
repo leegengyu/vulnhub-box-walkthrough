@@ -11,7 +11,8 @@ By DCAU
 * The host is running only the HTTP (port 80) service, where the port for this server is open.
 * Run `nmap -p- -A 10.0.2.7`:
 ![](/screenshots/dc-2/hostFullScan.jpg)
-* Looking at the services which the vulnerable VM is running, we can see a Apache httpd web server running on port 80, with the `http-title` stating that there is a redirect to `http://dc-2` which it did not follow.
+* Looking at the services which the vulnerable VM is running, we can see an Apache httpd web server running on port 80 (which is open), with the `http-title` stating that there is a redirect to `http://dc-2` which it did not follow.
+* There is also an open OpenSSH service running on port 7744 (which is open) which was not detected earlier in the `nmap` scan.
 * Open `http://10.0.2.7` on our browser and the address is indeed redirected to `http://dc-2`, but the page still fails to load.
 * Note: The `http://` prefix cannot be left out in this case, as compared to our previous attempted vulnerable VMs.
 * To solve this issue, add the entry `10.0.2.7 dc-2` to `/etc/hosts`. The key idea here is that for the page to properly load, the requests must reach the web server at the IP address. Since the IP address redirects us to `http://dc-2` initially, what we have done here is to ensure that the latter resolves to the former during the DNS resolution process.
@@ -29,19 +30,22 @@ By DCAU
 * Heading to the login page at `http://dc-2/wp-login.php`, we confirm that the username `admin` exists, but common login passwords such as `admin` and `password` do not work. `Flag 1` mentioned that our "usual wordlists probably won't work", and was probably referring to the use of wordlists on this login page.
 * I decided to test out what Flag 1 said about our usual wordlist not working, by using the wordlist `/usr/share/wordlists/rockyou`. About 7,500 attempts into the wordlist I stopped it since I was not seeing any results.
 * Flag 1 said that we had to be `cewl`, and initially I thought that it actually meant that we needed to be `cool`. I searched up `cewl` and found it to be a "ruby app which spiders a given url to a specified depth, optionally following external links, and returns a list of words which can then be used for password crackers", according to the [Kali tools](https://tools.kali.org/password-attacks/cewl) page.
-* I ran `cewl -d 2 -m 5 -w docswords.txt http://dc-2` initially, following the exact same set of parameters given in the example on the Kali tools page. I opened `docswords.txt` and found that the words within the word list were compiled from all parts (depending on parameter set) of the site, which explains why it was mentioned that `cewl` "spiders a given url to a specified depth".
-* Next, I ran `wpscan --url http://dc-2 --usernames admin --passwords docswords.txt` to brute-force the password for user `admin`. However, that did not work and I changed the parameters to `-d 5 -m 10`. Still, there were no valid passwords found.
-* I re-read flag 1 and the last sentence said that if we cannot find it, log in as another. I assumed that this meant that there were other accounts on the WordPress site besides the `admin` one, but we have to find it through other means because the site only revealed the admin account.
-* To do so, we run: `wpscan --url http://dc-2 --enumerate u`:
+* There is an example of `cewl` usage on the Kali tools page: `cewl -d 2 -m 5 -w docswords.txt https://example.com`.
+* I ran `cewl -w passwords.txt http://dc-2`, ommiting the `-d` and `-m` options because their default values of `-d 2` meant that the tool would spider to a depth of 2 and `-m 3` meant that the minimum word length is 3. These default values would appear to suffice for a start, and we will adjust them accordingly later on if required.
+* I opened `passwords.txt` and as expected, the words within the word list were compiled from different parts (also depending on parameter set) of the site, which explains why it was mentioned that `cewl` "spiders a given url to a specified depth".
+* Running `wc -l passwords.txt` tells us that there were 263 different passwords in the list.
+* Since we have a list of possible passwords now, we will search if there are any other users besides `admin`. Moreover, I re-read flag 1 and the last sentence said that if we cannot find it, log in as another. I assumed that this meant that there were other accounts on the WordPress site besides the `admin` one (and that getting the password for `admin` is likely to be difficult), but we have to find it through other means because the site only revealed the admin account.
+* We will be using `wpscan --url http://dc-2 --enumerate u`:
 ![](/screenshots/dc-2/wpscanUsersResults.jpg)
 * It turns out that there are a total of 3 accounts: `admin`, `jerry` and `tom`, where we were not aware of the latter 2.
-* I re-ran `wpscan --url http://dc-2 --usernames jerry --passwords docswords.txt` to brute-force the password for user `jerry`, using the wordlist `docswords.txt` with a minimum word length of 10:
-![](/screenshots/dc-2/wordPressUserjerryPassword.jpg)
-* And we have the password `adipiscing` for user `jerry`! I guess we were pretty lucky with this set of credentials because I was just trying random numbers for the minimum password length parameter.
-* I was curious where the password was located on the WordPress site, and found it immediately on the Welcome page - turns out that it was on the very first line of what greeted us.
+* Next, I ran `hydra -L users.txt -P passwords.txt dc-2 http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Location'` to brute-force the respective passwords for the 3 users.
+![](/screenshots/dc-2/hydraCrackPasswords.jpg)
+* We were not able to find the password for user `admin`, but the password for user `jerry` is `adipiscing`, while the password for user `tom` is `adipiscing`.
+* Note: We can also use `wpscan` to brute-force the respective passwords, though the trade-off is that the latter is only able to brute-force one user's password at a time, as compared to `hydra` which can brute-force multiple users' passwords using the same wordlist.
+* I was curious where jerry and tom's password was located on the WordPress site, and found the former immediately on the Welcome page - turns out that it was on the very first line of what greeted us. tom's password is found on the Our Products page, in paragraph 4.
 ![](/screenshots/dc-2/wordPressUserjerryPasswordLocation.jpg)
-* After logging in as user `jerry`, we find that the account is not of the Administrator type, given the limited options we see on the left-hand side toolbar, and also from our `Profile` page:
-![](/screenshots/dc-2/wordPressUserjerryProfile.jpg)
+* After logging in separately as user `jerry` and `tom`, we find that their accouns are not of the Administrator type, given the limited options we see on the left-hand side toolbar, and also from the `Profile` page:
+![](/screenshots/dc-2/wordPressUserjerryAndtomProfile.jpg.jpg)
 * Navigating the various sections on the left-hand side toolbar reveals no significant information except the `Pages` section, where we see `Flag 2` is located.
 ![](/screenshots/dc-2/flag2Location.jpg)
 * Opening up the Page in edit mode gives us `Flag 2`:
