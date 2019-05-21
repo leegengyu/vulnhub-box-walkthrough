@@ -29,7 +29,7 @@ By DCAU
 * Heading to the login page at `http://dc-2/wp-login.php`, we confirm that the username `admin` exists, but common login passwords such as `admin` and `password` do not work. `Flag 1` mentioned that our "usual wordlists probably won't work", and was probably referring to the use of wordlists on this login page.
 * I decided to test out what Flag 1 said about our usual wordlist not working, by using the wordlist `/usr/share/wordlists/rockyou`. About 7,500 attempts into the wordlist I stopped it since I was not seeing any results.
 * Flag 1 said that we had to be `cewl`, and initially I thought that it actually meant that we needed to be `cool`. I searched up `cewl` and found it to be a "ruby app which spiders a given url to a specified depth, optionally following external links, and returns a list of words which can then be used for password crackers", according to the [Kali tools](https://tools.kali.org/password-attacks/cewl) page.
-* I ran `cewl -d 2 -m 5 -w docswords.txt http://dc-2` initially, following the exact same set of parameters given in the example on the Kali tools page.
+* I ran `cewl -d 2 -m 5 -w docswords.txt http://dc-2` initially, following the exact same set of parameters given in the example on the Kali tools page. I opened `docswords.txt` and found that the words within the word list were compiled from all parts (depending on parameter set) of the site, which explains why it was mentioned that `cewl` "spiders a given url to a specified depth".
 * Next, I ran `wpscan --url http://dc-2 --usernames admin --passwords docswords.txt` to brute-force the password for user `admin`. However, that did not work and I changed the parameters to `-d 5 -m 10`. Still, there were no valid passwords found.
 * I re-read flag 1 and the last sentence said that if we cannot find it, log in as another. I assumed that this meant that there were other accounts on the WordPress site besides the `admin` one, but we have to find it through other means because the site only revealed the admin account.
 * To do so, we run: `wpscan --url http://dc-2 --enumerate u`:
@@ -38,6 +38,8 @@ By DCAU
 * I re-ran `wpscan --url http://dc-2 --usernames jerry --passwords docswords.txt` to brute-force the password for user `jerry`, using the wordlist `docswords.txt` with a minimum word length of 10:
 ![](/screenshots/dc-2/wordPressUserjerryPassword.jpg)
 * And we have the password `adipiscing` for user `jerry`! I guess we were pretty lucky with this set of credentials because I was just trying random numbers for the minimum password length parameter.
+* I was curious where the password was located on the WordPress site, and found it immediately on the Welcome page - turns out that it was on the very first line of what greeted us.
+![](/screenshots/dc-2/wordPressUserjerryPasswordLocation.jpg)
 * After logging in as user `jerry`, we find that the account is not of the Administrator type, given the limited options we see on the left-hand side toolbar, and also from our `Profile` page:
 ![](/screenshots/dc-2/wordPressUserjerryProfile.jpg)
 * Navigating the various sections on the left-hand side toolbar reveals no significant information except the `Pages` section, where we see `Flag 2` is located.
