@@ -38,8 +38,9 @@ By DCAU
 * We will be using `wpscan --url http://dc-2 --enumerate u`:
 ![](/screenshots/dc-2/wpscanUsersResults.jpg)
 * It turns out that there are a total of 3 accounts: `admin`, `jerry` and `tom`, where we were not aware of the latter 2.
-* Next, I ran `hydra -L users.txt -P passwords.txt dc-2 http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Location'` to brute-force the respective passwords for the 3 users.
+* Next, I ran `hydra -L users.txt -P passwords.txt dc-2 http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'` to brute-force the respective passwords for the 3 users.
 ![](/screenshots/dc-2/hydraCrackPasswords.jpg)
+* Note: The last parameter in the hydra command, `S=Dashboard` is the string that hydra watches out for to differentiate a successful brute-force attempt vs. a failed one, since it will see `Dashboard` as one of the sections in the left-hand side WordPress panel upon a successful login.
 * It seems that we were not able to find the password for user `admin`, but the password for user `jerry` is `adipiscing`, and the password for user `tom` is `parturient`.
 * Note: We can also use `wpscan` to brute-force the respective passwords, though the trade-off is that the latter is only able to brute-force one user's password at a time, as compared to `hydra` which can brute-force multiple users' passwords using the same wordlist.
 * I was curious where jerry and tom's password was located on the WordPress site, and found the former immediately on the `Welcome` page - turns out that it was on the very first line of what greeted us. tom's password is found on the `Our Products` page, in paragraph 4.
@@ -52,7 +53,6 @@ By DCAU
 ![](/screenshots/dc-2/flag2.jpg)
 * From the details of the post, the Page was published, but it probably did not appear on the site (where `Flag 1` did) because it was not inserted on the front page. The URL of the published Page is: `http://dc-2/index.php/flag-2/`.
 * Turns out that we could have just obtained `Flag 2` by modifying the url of `Flag 1`. I immediately tried `/flag-3/`, `/flag-4/`, `/flag-5/` and `/flag-final/` but they were all not found (or at least not viewable as the user `jerry` or `tom`).
-
 * We will now explore the other service, i.e. SSH that is also running on the vulnerable VM. Since we have the WordPress login credentials to `jerry` and `tom`, we will likewise attempt a SSH login using those same credentials: `ssh [username]@dc-2 -p 7744`.
 * We are able to successfully log in with `tom:parturient`:
 ![](/screenshots/dc-2/sshtomLogin.jpg)
@@ -68,14 +68,21 @@ By DCAU
 * After getting out of our `rbash`, we find that some commands still do not work, because they are "not found":
 ![](/screenshots/dc-2/binshCommandNotFound.jpg)
 * To resolve this issue, we have to execute `export PATH=/usr/sbin:/usr/bin:/sbin:/bin`, which restores the $PATH variable.
+* Note, we can execute a shortened version such as `export PATH=/usr/bin`, where $PATH points to only one of the binary directories, allowing us to run commands such as `whoami`. However, commands such as `su` cannot be run because they are **located at other binary directories**.
+* Run `find / -user root -perm -4000 -print 2>/dev/null` to find a list of binaries that we could possibly use to escalate our privileges:
+![](/screenshots/dc-2/setuidBinaries.jpg)
+* It does not appear that there are any setuid binaries that we can use here.
 * Going back to interpreting `Flag 3`, we find that the hint given is to run `su jerry`, since we are currently `tom`.
 * After running the command, we enter jerry's password `adipiscing`, and find that we have successfully logged in as `jerry`:
 ![](/screenshots/dc-2/sshjerryLogin.jpg)
+* Note: I am not exactly sure why we are able to switch to user `jerry` using this method, while we were not able to directly login through SSH as the same user earlier on.
 * After logging in, we head to tom's home directory and find `Flag 4`:
 ![](/screenshots/dc-2/flag4Location.jpg)
 * Opening up `flag4.txt`, we find that the hint given is on the very last line - that we have to use `git`.
 * Running `sudo -l`, we try to get a list of commands that we are able to execute (and forbidden from executing) as `root`:
 ![](/screenshots/dc-2/gitCommand.jpg)
+* Note: Running the `find` command to find setuid binaries for privilege escalation as `jerry` yields exactly the same results.
+* Note: I am not sure why `/usr/bin/git` does not turn up in the search results when we use the `find` command to find setuid binaries for privilege escalation.
 * Run `sudo git help add` to enter the `Git Manual` page of the `git-add` command, and then enter `!/bin/sh`:
 ![](/screenshots/dc-2/binshCommandGit.jpg)
 * Note: Instead of the parameter `add`, you can also use any of the `git-` commands, so long as we manage to enter a git manual page.

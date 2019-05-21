@@ -54,21 +54,22 @@ Explanation of how the `hydra` command works:
 * Having found an existing username `Elliot` for the WordPress site, our next step is to brute-force the password for that account.
 * Note: The username is **case-insensitive** in our case, i.e. you can login as user `elliot` as well, which is considered the same as `Elliot`.
 
-# Unsuccessful attempt to get elliot's password using hydra #
-* We will similarly use `hydra` to brute-force the password for user Elliot: run `hydra -V -l elliot -P fsocity.dic 10.0.2.5 http-form-post "/wp-login.php:log=elliot&pwd=^PASS^:ERROR"`.
-* There are 858,160 lines in the dictionary wordlist (run `cat fsocity.dic | wc -l` to find out), which means that hydra will try a total of 858,160 passwords.
-* During the first 1 minute, hydra made around 1,100 attempts on my Kali VM (with these added parameters`-t 40 -w 1`: 40 connects in parallel and maximum 1 second wait for responses). The worst-case scenario of trying every single line as a password is that it would take around 12 hours to crack the password, which is way too long.
-* Let us open the dictionary wordlist again to see if we are able to reduce the number of attempts that we have to make in the worst-case scenario.
-* There might be duplicates in the wordlist, so we will sort the list first, then remove the duplicates: `cat fsocity.dic | sort | uniq > fsocity2.dic`. After doing so, we see that there are now only 11,452 lines within the modified wordlist (fsocity2.dic), which is just 1+% of the original wordlist. We are very much likely to get the password in under 10 minutes this time.
-* Run `hydra -V -l elliot -P fsocity2.dic 10.0.2.5 http-post-form '/wp-login.php:log=elliot&pwd=^PASS^:ERROR'`.
-* Note-to-self: Not sure why, but we cannot seem to use `hydra` to crack the password of `elliot`. We will always get 0 valid passwords. I suspect that it is due to the fact that it takes awhile for the page to transit to the wp-admin page after a successful login, and thus, it is considered an unsuccessful attempt. In light of this, I added additional parameters `-t 1 -c 10`, which makes hydra run only 1 connect at any point in time, and for the wait time to be 10 seconds per login attempt, but to no avail.
+# Brute-force elliot's password using hydra #
+* We will similarly use `hydra` to brute-force the password for user Elliot. However, before we begin the brute-forcing process, we have to realise that there are 858,160 lines in the dictionary wordlist (run `wc -l fsocity.dic` to find out), which means that hydra will try a total of 858,160 passwords.
+* During the first 1 minute, hydra made around 1,100 attempts on my Kali VM (with the additional parameters of `-t 40 -w 1`: 40 connects in parallel and maximum 1 second wait for responses). The worst-case scenario of trying every single line as a password is that it would take around 12 hours to crack the password, which is way too long.
+* Let us examine the dictionary wordlist to see if we are able to reduce the number of attempts that we have to make in the worst-case scenario.
+* There might be duplicates in the wordlist, so we will sort the list first, then remove the duplicates: `cat fsocity.dic | sort | uniq > fsocity2.dic`. After doing so, we see that there are now only 11,451 lines within the modified wordlist (fsocity2.dic), which is just 1+% of the original wordlist. We are very much likely to get the password in under 10 minutes this time.
+* Run `hydra -l elliot -P fsocity2.dic 10.0.2.5 http-post-form '/wp-login.php:log=elliot&pwd=^PASS^:S=Dashboard'`:
+![](/screenshots/mr-robot-1/hydraBruteForcePassword.jpg)
+* It took around 10 minutes for me to get the password `ER28-0652`.
+* To-do: Perhaps find some configuration to speed up the brute-forcing process because `wpscan` took only a minute vs. hydra's 10 minutes.
 
 # Brute-force elliot's password using wpscan #
+* -Retry to confirm that it really took only 30 seconds-
 * Use `wpscan` instead to brute-force the password for user elliot: run `wpscan --url 10.0.2.5 --usernames elliot --passwords fsocity2.dic`:
 ![](/screenshots/mr-robot-1/wpScanBruteForcePassword.jpg)
-* It took only around half a minute to get the password `ER28-0652`, which is way faster than any attempts using `hydra`.
+* It took only around a minute to get the password `ER28-0652`, which was way faster than our attempt using `hydra`.
 * Note: If you were to run the same command again, you would get the results almost instantly, i.e. results were very likely to have been cached.
-* Alternate: I tried to run same command using the original wordlist given, just to see how long it takes. It took n minutes:
 
 * Besides the many repetitions in the orginal list, the password is also found somewhere at the end of the file, thus it took quite some time to get it.
 * After logging in as elliot, we find that we are able to see the full panel on the left-hand side of the wp-admin page. To confirm that we have full access to the site, we check `Users`, and find that elliot indeed has administrator privileges.
