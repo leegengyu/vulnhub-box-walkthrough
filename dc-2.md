@@ -40,7 +40,7 @@ By DCAU
 * It turns out that there are a total of 3 accounts: `admin`, `jerry` and `tom`, where we were not aware of the latter 2.
 * Next, I ran `hydra -L users.txt -P passwords.txt dc-2 http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Location'` to brute-force the respective passwords for the 3 users.
 ![](/screenshots/dc-2/hydraCrackPasswords.jpg)
-* It seems that we were not able to find the password for user `admin`, but the password for user `jerry` is `adipiscing`, and the password for user `tom` is `adipiscing`.
+* It seems that we were not able to find the password for user `admin`, but the password for user `jerry` is `adipiscing`, and the password for user `tom` is `parturient`.
 * Note: We can also use `wpscan` to brute-force the respective passwords, though the trade-off is that the latter is only able to brute-force one user's password at a time, as compared to `hydra` which can brute-force multiple users' passwords using the same wordlist.
 * I was curious where jerry and tom's password was located on the WordPress site, and found the former immediately on the `Welcome` page - turns out that it was on the very first line of what greeted us. tom's password is found on the `Our Products` page, in paragraph 4.
 ![](/screenshots/dc-2/wordPressUserjerryPasswordLocation.jpg)
@@ -52,3 +52,34 @@ By DCAU
 ![](/screenshots/dc-2/flag2.jpg)
 * From the details of the post, the Page was published, but it probably did not appear on the site (where `Flag 1` did) because it was not inserted on the front page. The URL of the published Page is: `http://dc-2/index.php/flag-2/`.
 * Turns out that we could have just obtained `Flag 2` by modifying the url of `Flag 1`. I immediately tried `/flag-3/`, `/flag-4/`, `/flag-5/` and `/flag-final/` but they were all not found (or at least not viewable as the user `jerry` or `tom`).
+
+* We will now explore the other service, i.e. SSH that is also running on the vulnerable VM. Since we have the WordPress login credentials to `jerry` and `tom`, we will likewise attempt a SSH login using those same credentials: `ssh [username]@dc-2 -p 7744`.
+* We are able to successfully log in with `tom:parturient`:
+![](/screenshots/dc-2/sshtomLogin.jpg)
+* However, we can also see that we are stuck with a `rbash`, i.e. a restricted shell that restricts some features of bash shell.
+* We are still able to run commands such as `ls`, which shows us that `Flag 3` is in the current working directory:
+![](/screenshots/dc-2/flag3Location.jpg)
+* However, we are not able to view the flag via commands such as `cat` and `more`.
+* Fortunately, the `vi` text editor is available to us, and opening up `flag3.txt` gives us the following:
+![](/screenshots/dc-2/flag3.jpg)
+* Note: I tried other text editors such as `vim` and `nano` but they were not available.
+* To get out of `rbash`, I executed `:set shell=/bin/sh` and `:shell` within `vi`, as learnt earlier from an OverTheWire Bandit [exercise](https://github.com/leegengyu/OverTheWire-Bandit) at level 25.
+* Note: Setting the shell to `/bin/bash` does not work. Also, `!sh` for the latter command does not work.
+* After getting out of our `rbash`, we find that some commands still do not work, because they are "not found":
+![](/screenshots/dc-2/binshCommandNotFound.jpg)
+* To resolve this issue, we have to execute `export PATH=/usr/sbin:/usr/bin:/sbin:/bin`, which restores the $PATH variable.
+* Going back to interpreting `Flag 3`, we find that the hint given is to run `su jerry`, since we are currently `tom`.
+* After running the command, we enter jerry's password `adipiscing`, and find that we have successfully logged in as `jerry`:
+![](/screenshots/dc-2/sshjerryLogin.jpg)
+* After logging in, we head to tom's home directory and find `Flag 4`:
+![](/screenshots/dc-2/flag4Location.jpg)
+* Opening up `flag4.txt`, we find that the hint given is on the very last line - that we have to use `git`.
+* Running `sudo -l`, we try to get a list of commands that we are able to execute (and forbidden from executing) as `root`:
+![](/screenshots/dc-2/gitCommand.jpg)
+* Run `sudo git help add` to enter the `Git Manual` page of the `git-add` command, and then enter `!/bin/sh`:
+![](/screenshots/dc-2/binshCommandGit.jpg)
+* Note: Instead of the parameter `add`, you can also use any of the `git-` commands, so long as we manage to enter a git manual page.
+* Note: Instead of running `/bin/sh`, you can also run `/bin/bash`.
+* Hurray, we have now gotten `root` access!
+* We head to the `root` directory, and find `final-flag.txt`:
+![](/screenshots/dc-2/flagLast.jpg)

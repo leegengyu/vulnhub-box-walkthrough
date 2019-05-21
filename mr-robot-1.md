@@ -55,7 +55,7 @@ Explanation of how the `hydra` command works:
 * Note: The username is **case-insensitive** in our case, i.e. you can login as user `elliot` as well, which is considered the same as `Elliot`.
 
 # Unsuccessful attempt to get elliot's password using hydra #
-* We will similarly use `hydra` to brute-force the password for user Elliot: run `hydra -V 10.0.2.5 http-form-post "/wp-login.php:log=elliot&pwd=^PASS^:ERROR" -l elliot -P fsocity.dic`.
+* We will similarly use `hydra` to brute-force the password for user Elliot: run `hydra -V -l elliot -P fsocity.dic 10.0.2.5 http-form-post "/wp-login.php:log=elliot&pwd=^PASS^:ERROR"`.
 * There are 858,160 lines in the dictionary wordlist (run `cat fsocity.dic | wc -l` to find out), which means that hydra will try a total of 858,160 passwords.
 * During the first 1 minute, hydra made around 1,100 attempts on my Kali VM (with these added parameters`-t 40 -w 1`: 40 connects in parallel and maximum 1 second wait for responses). The worst-case scenario of trying every single line as a password is that it would take around 12 hours to crack the password, which is way too long.
 * Let us open the dictionary wordlist again to see if we are able to reduce the number of attempts that we have to make in the worst-case scenario.
