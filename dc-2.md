@@ -21,34 +21,34 @@ By DCAU
 * All of the sections contain sample texts with nothing noteworthy except the `Flag` section, which gives us `Flag 1`:
 ![](/screenshots/dc-2/flag1.jpg)
 * The site which holds `Flag 1` is `http://dc-2/index.php/flag/`.
-* Clicking on any of the 5 sections or the main page does not give us the links to any of the other locations on the site, hence I tried something like `http://dc-2/index.php/admin`, which gave us an error message stating that the page cannot be found and at the same time allowing us to use the search function.
+* Clicking on any of the 5 sections or the main page does not give us the links to any of the other locations on the site, hence I tried something like `http://dc-2/index.php/admin`, which gave us an error message stating that the page cannot be found and at the same time allowing us to use the search function:
 ![](/screenshots/dc-2/wordPressMissingPage.jpg)
-* It does not matter what you type into the search field, but hitting the search button allows us to get to this page which shows us what posts there are on the WordPress page, as well as the links to the login site.
+* It does not matter what you type into the search field, but hitting the search button allows us to get to this page which shows us what posts there are on the WordPress page, as well as the link to the login site:
 ![](/screenshots/dc-2/wordPressSearch.jpg)
 * We see from the only post on the site, titled `Hello world!` that the post was published by the user `admin`. Besides that, there appears to be nothing noteworthy from the post and the comment to the post.
 ![](/screenshots/dc-2/wordPressPost.jpg)
 * Heading to the login page at `http://dc-2/wp-login.php`, we confirm that the username `admin` exists, but common login passwords such as `admin` and `password` do not work. `Flag 1` mentioned that our "usual wordlists probably won't work", and was probably referring to the use of wordlists on this login page.
-* I decided to test out what Flag 1 said about our usual wordlist not working, by using the wordlist `/usr/share/wordlists/rockyou`. About 7,500 attempts into the wordlist I stopped it since I was not seeing any results.
-* Flag 1 said that we had to be `cewl`, and initially I thought that it actually meant that we needed to be `cool`. I searched up `cewl` and found it to be a "ruby app which spiders a given url to a specified depth, optionally following external links, and returns a list of words which can then be used for password crackers", according to the [Kali tools](https://tools.kali.org/password-attacks/cewl) page.
+* I decided to test out what Flag 1 said about our usual wordlist not working, by using the wordlist `/usr/share/wordlists/rockyou`. After about 7,500 attempts into the wordlist, I stopped it since I was not seeing any results.
+* Flag 1 said that we "just need to be `cewl`", and initially I thought that it actually meant that we needed to be `cool`. I searched up `cewl` and found it to be a "ruby app which spiders a given url to a specified depth, optionally following external links, and returns a list of words which can then be used for password crackers", according to the [Kali tools](https://tools.kali.org/password-attacks/cewl) page.
 * There is an example of `cewl` usage on the Kali tools page: `cewl -d 2 -m 5 -w docswords.txt https://example.com`.
-* I ran `cewl -w passwords.txt http://dc-2`, ommiting the `-d` and `-m` options because their default values of `-d 2` meant that the tool would spider to a depth of 2 and `-m 3` meant that the minimum word length is 3. These default values would appear to suffice for a start, and we will adjust them accordingly later on if required.
+* Using the example as a basis, I ran `cewl -w passwords.txt http://dc-2`, ommiting the `-d` and `-m` options because their default values of `-d 2` meant that the tool would spider to a depth of 2 and `-m 3` meant that the minimum word length is 3. These default values appear to suffice for a start, and we will adjust them accordingly later on if required.
 * I opened `passwords.txt` and as expected, the words within the word list were compiled from different parts (also depending on parameter set) of the site, which explains why it was mentioned that `cewl` "spiders a given url to a specified depth".
 * Running `wc -l passwords.txt` tells us that there were 263 different passwords in the list.
-* Since we have a list of possible passwords now, we will search if there are any other users besides `admin`. Moreover, I re-read flag 1 and the last sentence said that if we cannot find it, log in as another. I assumed that this meant that there were other accounts on the WordPress site besides the `admin` one (and that getting the password for `admin` is likely to be difficult), but we have to find it through other means because the site only revealed the admin account.
+* Since we have a list of possible passwords now, we will search if there are any other users besides `admin`. Moreover, I re-read flag 1 and the last sentence said that if we cannot find it, log in as another. I assumed that this meant that there were other accounts on the WordPress site besides the `admin` one (and that getting the password for `admin` is likely to be difficult), but we have to find these other accounts through other means because the site only revealed the admin account earlier on.
 * We will be using `wpscan --url http://dc-2 --enumerate u`:
 ![](/screenshots/dc-2/wpscanUsersResults.jpg)
 * It turns out that there are a total of 3 accounts: `admin`, `jerry` and `tom`, where we were not aware of the latter 2.
 * Next, I ran `hydra -L users.txt -P passwords.txt dc-2 http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Location'` to brute-force the respective passwords for the 3 users.
 ![](/screenshots/dc-2/hydraCrackPasswords.jpg)
-* We were not able to find the password for user `admin`, but the password for user `jerry` is `adipiscing`, while the password for user `tom` is `adipiscing`.
+* It seems that we were not able to find the password for user `admin`, but the password for user `jerry` is `adipiscing`, and the password for user `tom` is `adipiscing`.
 * Note: We can also use `wpscan` to brute-force the respective passwords, though the trade-off is that the latter is only able to brute-force one user's password at a time, as compared to `hydra` which can brute-force multiple users' passwords using the same wordlist.
-* I was curious where jerry and tom's password was located on the WordPress site, and found the former immediately on the Welcome page - turns out that it was on the very first line of what greeted us. tom's password is found on the Our Products page, in paragraph 4.
+* I was curious where jerry and tom's password was located on the WordPress site, and found the former immediately on the `Welcome` page - turns out that it was on the very first line of what greeted us. tom's password is found on the `Our Products` page, in paragraph 4.
 ![](/screenshots/dc-2/wordPressUserjerryPasswordLocation.jpg)
-* After logging in separately as user `jerry` and `tom`, we find that their accouns are not of the Administrator type, given the limited options we see on the left-hand side toolbar, and also from the `Profile` page:
-![](/screenshots/dc-2/wordPressUserjerryAndtomProfile.jpg.jpg)
+* After logging in separately as user `jerry` and `tom`, we find that their accounts are not of the Administrator type, given the limited options we see on the left-hand side toolbar, and also from the `Profile` page:
+![](/screenshots/dc-2/wordPressUserjerryAndtomProfile.jpg)
 * Navigating the various sections on the left-hand side toolbar reveals no significant information except the `Pages` section, where we see `Flag 2` is located.
 ![](/screenshots/dc-2/flag2Location.jpg)
 * Opening up the Page in edit mode gives us `Flag 2`:
 ![](/screenshots/dc-2/flag2.jpg)
-* From the details of the post, the Page was published, but it probably did not appear on the site (where `Flag 1` did) because it was not inserted on the front page. The url of the published Page is: `http://dc-2/index.php/flag-2/`.
-* Turns out that we could have just obtained `Flag 2` by modifying the url of `Flag 1`. I immediately tried `/flag-3/`, `/flag-4/`, `/flag-5/` and `/flag-final/` but they were all not found (or at least not viewable as the user `jerry`).
+* From the details of the post, the Page was published, but it probably did not appear on the site (where `Flag 1` did) because it was not inserted on the front page. The URL of the published Page is: `http://dc-2/index.php/flag-2/`.
+* Turns out that we could have just obtained `Flag 2` by modifying the url of `Flag 1`. I immediately tried `/flag-3/`, `/flag-4/`, `/flag-5/` and `/flag-final/` but they were all not found (or at least not viewable as the user `jerry` or `tom`).
