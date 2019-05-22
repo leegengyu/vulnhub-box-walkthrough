@@ -13,10 +13,10 @@ By Fatih Çelik
 
 # HTTP service #
 * We visit `10.0.2.6` and find a web server running, with the rendered page broken:
-![](/screenshots/hackinos-1/httpServicePage.jpg)
-* Hovering our mouse over the `Log in` hyperlink under the `Meta` section shows us that the domain name is expected to be localhost running on port 8000. instead of 10.0.2.6. `localhost` does not resolve to 10.0.2.6, but to 127.0.1.1 instead (see below) hence the broken page.
+![](/screenshots/hackinos-1/wordPressInitialLoad.jpg)
+* Hovering our mouse over the `Log in` hyperlink under the `Meta` section shows us that the domain name is expected to be localhost running on port 8000, instead of 10.0.2.6:
 ![](/screenshots/hackinos-1/httpServicePageHover.jpg)
-* To resolve this issue, edit our `/etc/hosts` file accordingly:
+* `localhost` does not resolve to 10.0.2.6, but to 127.0.1.1 instead - hence the broken page. To resolve this issue, edit our `/etc/hosts` file accordingly:
 ![](/screenshots/hackinos-1/hostsFileEntries.jpg)
 * Note: The commented-out line for the localhost entry that maps to 127.0.1.1 is deliberate so that we can add back this entry after we are done with this challenge, since that was the original entry in the file.
 * Reload `10.0.2.6` to see the intended layout of the page. There is only 1 post in the entire WordPress site by user `Handsome_Container`:
@@ -34,7 +34,6 @@ By Fatih Çelik
 * Remember the `/uploads` directory that we also saw in the `robots.txt` file earlier? It is likely that the files which we uploaded are found in that directory.
 * I clicked on the `Submit` button for a third time without attaching any file to see what would happen, and there is a warning message `getimagesize(): Filename cannot be empty in /var/www/html/upload.php on line 25` on top of the smiley face. From this, the smiley face may not possibly mean a successful upload since it appears when there is no file attached, or it could also mean that the logic flow was badly coded.
 * We can also tell that the warning was not deliberately caught by the developer, which explains the raw warning message being the output.
-
 * Looking at the Page Source, we find a comment sneakily hidden at the bottom at line 62 as a comment: `https://github.com/fatihhcelik/Vulnerable-Machine---Hint`. I did not notice it initially because there were only a few elements on the page and I was thus expecting a short source page.
 * Loading the GitHub link, we see that there is a README file and `upload.php`.
 * From the README, we can deduce that the uploads page was deliberately designed to be vulnerable.

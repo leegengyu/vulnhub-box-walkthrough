@@ -53,7 +53,8 @@ By DCAU
 ![](/screenshots/dc-2/flag2.jpg)
 * From the details of the post, the Page was published, but it probably did not appear on the site (where `Flag 1` did) because it was not inserted on the front page. The URL of the published Page is: `http://dc-2/index.php/flag-2/`.
 * Turns out that we could have just obtained `Flag 2` by modifying the url of `Flag 1`. I immediately tried `/flag-3/`, `/flag-4/`, `/flag-5/` and `/flag-final/` but they were all not found (or at least not viewable as the user `jerry` or `tom`).
-* We will now explore the other service, i.e. SSH that is also running on the vulnerable VM. Since we have the WordPress login credentials to `jerry` and `tom`, we will likewise attempt a SSH login using those same credentials: `ssh [username]@dc-2 -p 7744`.
+* We will now explore the other service (SSH) that is also running on the vulnerable VM. Our attempts to login via SSH will use the same set of credentials which we have obtained for the 2 WordPress accounts, since this is the only set of credentials which we have at the moment.
+* Run `ssh [username]@dc-2 -p 7744`.
 * We are able to successfully log in with `tom:parturient`:
 ![](/screenshots/dc-2/sshtomLogin.jpg)
 * However, we can also see that we are stuck with a `rbash`, i.e. a restricted shell that restricts some features of bash shell.
@@ -81,11 +82,14 @@ By DCAU
 * Opening up `flag4.txt`, we find that the hint given is on the very last line - that we have to use `git`.
 * Running `sudo -l`, we try to get a list of commands that we are able to execute (and forbidden from executing) as `root`:
 ![](/screenshots/dc-2/gitCommand.jpg)
-* Note: Running the `find` command to find setuid binaries for privilege escalation as `jerry` yields exactly the same results.
+* From the results of the command, we can see that we are able to run `/usr/bin/git` as `root`, and also without having to know root's password. This finding indeed matches the hint given in Flag 4.
+* Note: Running the `find` command to find setuid binaries for privilege escalation as user `jerry` yields exactly the same results as was observed for user `tom`.
 * Note: I am not sure why `/usr/bin/git` does not turn up in the search results when we use the `find` command to find setuid binaries for privilege escalation.
+* We have to use the `git` command to escalate our privileges, and one way of doing so is to get ourselves into the manual page where we will open a root shell from there.
 * Run `sudo git help add` to enter the `Git Manual` page of the `git-add` command, and then enter `!/bin/sh`:
 ![](/screenshots/dc-2/binshCommandGit.jpg)
-* Note: Instead of the parameter `add`, you can also use any of the `git-` commands, so long as we manage to enter a git manual page.
+* Note: `sudo` has to be part of the command, else the shell that we spawn from the manual page is not a root shell.
+* Note: Instead of the parameter `add`, you can also use any of the other `git-` commands, so long as we manage to enter a git manual page. These other commands can be found by running `git help`.
 * Note: Instead of running `/bin/sh`, you can also run `/bin/bash`.
 * Hurray, we have now gotten `root` access!
 * We head to the `root` directory, and find `final-flag.txt`:
