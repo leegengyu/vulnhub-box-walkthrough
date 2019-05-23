@@ -137,3 +137,6 @@ for ($i = 1; $i <= 100; $i++) {
 
 # To-be-added subsequently #
 * Write our hash-generation script using other languages such as Python.
+
+# Other walkthroughs visited #
+1. https://windsorwebdeveloper.com/hackinos-1-vulnhub-walkthrough/
