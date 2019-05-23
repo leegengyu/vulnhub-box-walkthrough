@@ -65,7 +65,7 @@ for ($i = 1; $i <= 100; $i++) {
 * Note: Instead of the `--sc 200` option, you can use `--hc 404` (which means to show only responses without the specified code of 404, i.e. Not Found) to get the same result. Also, remove the `--sc/--hc` option if you want to see the entire bruteforce results log (i.e. without filters).
 * Upon loading `http://localhost:8000/uploads/ca61202c13182f5fc4021e1b42259c79.png`, I was able to see the image `index.png` file that I uploaded earlier on.
 * Since we have confirmed our ability to upload and open an image file onto the web server, we can then upload a malicious file and open it to gain a reverse shell on the web server.
-* Go to `usr/share/webshells/php` and open `php-reverse-shell.php`. Change the values at lines 49 and 50, which is the IP address (`$ip`) and port number (`$port`) respectively of our Kali VM. I will be using port 3000 here.
+* Go to `/usr/share/webshells/php` and open `php-reverse-shell.php`. Change the values at lines 49 and 50, which is the IP address (`$ip`) and port number (`$port`) respectively of our Kali VM. I will be using port 3000 here.
 * However, recall that our file type is restricted to only .png or .gif. One way that servers prevent shells from being uploaded is to restrict the file types of files that users can upload. Nonetheless, we can bypass this limitation by adding the text `GIF89a` or `GIF98` to the start of php-reverse-shell.php.
 * Note: Adding the allowed file extensions to our malicious file, e.g. `malicious.php.png` or `malicious.php.gif` does not work because the file type check is done by examining the file MIME (way to identify files according to nature and format) type, and not by splicing the entire string to get the file type.
 * After adding the text, upload `php-reverse-shell.php` (we have now bypassed the file extension filter) and then rinse and repeat using `wfuzz` as done previously to obtain the file name of our shell code: `wfuzz -w MD5HashesList.txt --sc 200 http://localhost:8000/uploads/FUZZ.php`. Mine is `6263d635867b1da16ef04b5d419a6fed`.
@@ -74,7 +74,7 @@ for ($i = 1; $i <= 100; $i++) {
 * After running that command, we now have a reverse shell on the vulnerable web server, as user `www-data`:
 ![](/screenshots/hackinos-1/successfulReverseShell.jpg)
 * Interestingly on some occasions, after we terminate the nc connection, the malicious file appears to no longer be on the web server anymore. We have to re-upload our malicious file to the web server.
-* Heading to `/var/www/html`, open `wp-config.php` and we find that the MySQL login credentials are `wordpress:wordpress`. *We will not make use of this information for this walkthrough at this iteration - to consider how we can use this for privilege escalation in future*.
+* Heading to `/var/www/html`, open `wp-config.php` and we find that the MySQL login credentials are `wordpress:wordpress`. We are not exactly sure if we need this later, but this is one of the pieces of information that I take note once I get access, just in case we are stuck later on (and who knows when it might come in handy).
 * Next, we will have to find a way for privilege escalation, using a binary with the setuid bit enabled. Run `find / -user root -perm -4000 -print 2>/dev/null`, just like in mr-robot-1:
 ![](/screenshots/hackinos-1/suidExecutables.jpg)
 * Amongst these binaries, we will use `/usr/bin/tail` to escalate our privileges: `tail -c1G /etc/shadow`, where `tail` allows us to output the final parts of a file:
@@ -89,15 +89,50 @@ for ($i = 1; $i <= 100; $i++) {
 ![](/screenshots/hackinos-1/johnRerun.jpg)
 * Note: If you want to re-run the command to observe the process again, go to `.john` and delete `john.pot`.
 * Note: If you want to view the password again without repeating the above process, execute `john --show decryptThisPassword.txt` (replacing the last part with your file name).
-* Now that we have our password, we will spawn our interactive shell with `python -c 'import pty; pty.spawn("/bin/bash")'`, then run `su`, entering the password `john`.
+* Now that we have our password, we will spawn our interactive shell with `python -c 'import pty; pty.spawn("/bin/bash")'`, then run `su` and enter the password `john`.
 * Next, we head to `/root`, and find that there is a file `flag`. However, that file only reveals to us a cryptic message, instead of the actual flag (I think?):
 ![](/screenshots/hackinos-1/flagInitial.jpg)
 * We have already gotten root access, but the flag still eludes us: we will have to find the flag elsewhere.
 * Opening up the other files on `/root` directory, the file `.port` holds another cryptic message as well. Have not much of an idea what the `7*` means as well.
+* At this point I felt pretty much stuck.
 * I went back to the login page of the vulnerable VM (that we had encountered initially), and checked for the username `hummingbirdscyber` against the `/etc/shadow` file, and did not find the username on the list. It seems like the username belongs to an account on another service of the vulnerable VM.
-* Running `ipconfig` on our vulnerable VM shows that the internal IP address is `172.18.0.3`:
+* It seems like there might be a network running within the vulnerable VM, given the hints provided in /root and user `hummingbirdscyber` not being found. Moreover, examining our very first login screenshot, there were 3 tabs under the `Active Network Connections`. Thus far, we would have expected to see only 1 tab - `Wired connection 1 (default)`.
+* Running `ipconfig` on our vulnerable VM shows that the internal IP address is `172.18.0.2`:
 ![](/screenshots/hackinos-1/vulnerableVMNetwork.jpg)
+* I tried to run `nmap` to find out the other live hosts on the network but it was not found.
+* Remembering that we had a set of MySQL credentials previously, I ran a `ping` request to find out if we can get an IP address of it: `ping -c 1 db`:
+![](/screenshots/hackinos-1/pingDB.jpg)
+* Note `-c 1` ensures that the ICMP requests would stop after receiving 1 reply, instead of being sent indefinitely.
+* The `ping` request resulted in a packet being successfully received - it turns out that the database has its own IP address, which is `172.18.0.3`.
+* To log in into the MySQL database, run `mysql -h 172.18.0.3 -u wordpress -pwordpress`:
+![](/screenshots/hackinos-1/mySQLLogin.jpg)
+* Note: There is no whitespace between `-p` and `wordpress` (the password itself) as per stated in the `man` page. Adding the whitespace will result in MySQL prompting for one immediately even though it was already included in the command.
+* Note: While it is required that there is no whitespace for the password, having a whitespace (or otherwise) between `-u` and `wordpress` (the username itself) does not affect the login process, though the `man` page stated that there should be a whitespace.
+* If you see `MySQL [(wordpress)]>` after logging in, you can skip the next step.
+* After logging in, we find that we see `none` that is part of `MySQL [(none)]>`. This means that we are currently not looking at any databases in particular. Run `show databases;` to find out what databases there are, and then `use wordpress;` to switch to the WordPress database:
+![](/screenshots/hackinos-1/mySQLChangeDatabase.jpg)
+* Next, we want to see what tables there are within the database, using `show tables;`:
+![](/screenshots/hackinos-1/mySQLTables.jpg)
+* The very first entry on the top, `host_ssh_cred` stands out from the rest of the tables. Run `select * from host_ssh_cred;` to see what is within the table:
+![](/screenshots/hackinos-1/mySQLTablehostsshcred.jpg)
+* We are given the password `e10adc3949ba59abbe56e057f20f883e` for the username `hummingbirdscyber`. The password is likely to be a MD5 hash based on `hash-identifier`.
+* Using an online password hash cracker, we find that the password is `123456`.
+* The `hummingbirdscyber:123456` set of credentials will be used for our SSH login, since the table name suggests that it is the credentials to the host SSH: `ssh hummingbirdscyber@10.0.2.6`:
+![](/screenshots/hackinos-1/sshLogin.jpg)
+* At this point in time, I found out that there was more than 1 way to escalate our privileges - I will be going through both of them below:
 
+# SetUID Binary for Privilege Escalation #
+* I ran the command `find / -user root -perm -4000 -print 2>/dev/null` to find the list of setuid binaries and to see if we could possibly use any of them for privilege escalation:
+![](/screenshots/hackinos-1/setuidBinaries.jpg)
+* None of the binaries from the list really stood out to me but the very first one did: `/home/hummingbirdscyber/Desktop/a.out`.
+* I ran the binary file and found that our privileges were temporarily escalated, `root` got printed, and then we were back to being user `hummingbirdscyber`. When `root` was printed, `whoami` was presumably executed.
+* This was the part where I learnt: running `$PATH` showed us that the first place where files would be searched for execution was in `/home/hummingbirdscyber/bin`:
+![](/screenshots/hackinos-1/pathVariable.jpg)
+* This directory did not yet existed, so let us create it using `mkdir`.
+* After doing so, we will create our malicious file called `whoami` (which will give us our root shell), which contains a one-liner `/bin/sh` (or `/bin/bash`).
+* Our version of `whoami` will be executed by `a.out`, instead of the standard `whoami`.
+
+# Docker Image for Privilege Escalation #
 * To-be-continued...
 
 # To-be-added subsequently #
