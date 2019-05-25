@@ -135,9 +135,8 @@ for ($i = 1; $i <= 100; $i++) {
 ![](/screenshots/hackinos-1/pathVariable.jpg)
 * In this case, `/home/hummingbirdscyber/bin` was the first directory to be searched.
 * This directory did not yet existed, so let us create it using `mkdir`.
-* After doing so, the brilliant idea that I learnt is that we will create our own malicious version of `whoami` (which will give us our root shell), which will contain a one-liner `/bin/bash` (or `/bin/sh`).
+* After doing so, the brilliant idea that I learnt is that we will create our own malicious version of `whoami` (which will give us our root shell), which will contain a one-liner `/bin/bash` (or `/bin/sh`), and this version will thus be executed by `a.out`, instead of the standard `whoami`.
 * Note: The text editor `vim` is not available, so I used `nano` instead.
-* Our version of `whoami` will thus be executed by `a.out`, instead of the standard `whoami`.
 * After creating our `whoami`, `chmod +x whoami` to give it permissions to be executable, else running `a.out` would not give us the root shell we desire.
 * Finally, run `./a.out` and we have our root shell!
 ![](/screenshots/hackinos-1/rootBinBash.jpg)
