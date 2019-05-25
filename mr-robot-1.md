@@ -112,3 +112,9 @@ Explanation of how the `hydra` command works:
 * Key 1: 073403c8a58a1f80d943455fb30724b9
 * Key 2: 822c73956184f694993bede3eb39f959
 * Key 3: 04787ddef27c3dee1ee161b21670b4e4
+
+# Other walkthroughs visited #
+1. https://securitybytes.io/vulnhub-com-mr-robot-1-ctf-walkthrough-7d4800fc605a
+2. https://5h4d0wb0y.github.io/2017-05-08-mr-robot1/
+3. https://scriptkidd1e.wordpress.com/mr-robot-1-vulnhubs-vm-walkthrough/
+4. https://resources.infosecinstitute.com/vulnhub-machines-walkthrough-series-mr-robot/#gref

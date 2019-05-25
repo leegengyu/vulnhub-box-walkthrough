@@ -125,12 +125,30 @@ for ($i = 1; $i <= 100; $i++) {
 * I ran the command `find / -user root -perm -4000 -print 2>/dev/null` to find the list of setuid binaries and to see if we could possibly use any of them for privilege escalation:
 ![](/screenshots/hackinos-1/setuidBinaries.jpg)
 * None of the binaries from the list really stood out to me but the very first one did: `/home/hummingbirdscyber/Desktop/a.out`.
-* I ran the binary file and found that our privileges were temporarily escalated, `root` got printed, and then we were back to being user `hummingbirdscyber`. When `root` was printed, `whoami` was presumably executed.
-* This was the part where I learnt: running `$PATH` showed us that the first place where files would be searched for execution was in `/home/hummingbirdscyber/bin`:
+* I ran the binary file (`./a.out`), `root` got printed and the program terminated immediately after that.
+* Our privileges were very likely to have been temporarily escalated to `root`, before being relegated back to being user `hummingbirdscyber`. When `root` was printed, `whoami` was also likely to have been executed.
+* To confirm what we have in mind, run `strings a.out` to see the strings of printable characters in the file:
+![](/screenshots/hackinos-1/stringsAOut.jpg)
+* Near the start of the output, we see that `setuid` was executed, presumably where we took on the role of `root`, and then `whoami` was executed somewhere not long after. `setuid` was then executed again towards the end of the file, where we were back to being `hummingbirdscyber`.
+* Note: The screenshot does not show all of the output from the `strings` command that was executed.
+* After that, I was mostly clueless on how to proceed, and this was the part where I learnt: running `$PATH` showed us the order of locations where files would be searched for execution:
 ![](/screenshots/hackinos-1/pathVariable.jpg)
+* In this case, `/home/hummingbirdscyber/bin` was the first directory to be searched.
 * This directory did not yet existed, so let us create it using `mkdir`.
-* After doing so, we will create our malicious file called `whoami` (which will give us our root shell), which contains a one-liner `/bin/sh` (or `/bin/bash`).
-* Our version of `whoami` will be executed by `a.out`, instead of the standard `whoami`.
+* After doing so, the brilliant idea that I learnt is that we will create our own malicious version of `whoami` (which will give us our root shell), which will contain a one-liner `/bin/bash` (or `/bin/sh`).
+* Note: The text editor `vim` is not available, so I used `nano` instead.
+* Our version of `whoami` will thus be executed by `a.out`, instead of the standard `whoami`.
+* After creating our `whoami`, `chmod +x whoami` to give it permissions to be executable, else running `a.out` would not give us the root shell we desire.
+* Finally, run `./a.out` and we have our root shell!
+![](/screenshots/hackinos-1/rootBinBash.jpg)
+![](/screenshots/hackinos-1/rootBinSh.jpg)
+* Depending on whether your one-liner in `whoami` was a `/bin/bash` or `/bin/sh`, your root shell looks slightly differently, where the former's look being very much identical to what we had as a non-root user.
+* Note: I could not quite run the `whoami` command to show that we are `root` because doing so would result in another shell being spawn, but you can just run `id` instead to confirm this.
+* Head to `/root` directory, and we find the file `flag`:
+![](/screenshots/hackinos-1/rootDirectory.jpg)
+* Open `flag` and we see an ASCII art that shows a hummingbird:
+![](/screenshots/hackinos-1/flagFinal.jpg)
+* Hurray, we are done for this exercise!
 
 # Docker Image for Privilege Escalation #
 * To-be-continued...
@@ -140,3 +158,4 @@ for ($i = 1; $i <= 100; $i++) {
 
 # Other walkthroughs visited #
 1. https://windsorwebdeveloper.com/hackinos-1-vulnhub-walkthrough/
+2. https://medium.com/infosec-adventures/hackinos-walkthrough-3c37844f44a9
