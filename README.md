@@ -6,3 +6,4 @@ This repository contains a list of CTFs/vulnerable virtual machines which I have
 3. HackInOS: 1 (Fatih Çelik)
 4. DC: 1 (DCAU)
 5. DC: 2 (DCAU)
+6. DC: 3 (DCAU)
