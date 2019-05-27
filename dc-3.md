@@ -14,7 +14,9 @@ By DCAU
 * Looking at the services which the vulnerable VM is running, we can see an Apache httpd web server running on port 80 (which is open). Also, it appears that the web server is running on a Joomla Content Management System (CMS) instead of WordPress.
 * Opening `http://10.0.2.8` reveals a site with a welcome post (message) and a login form on the right-hand side:
 ![](/screenshots/dc-3/siteWebServer.jpg)
-* Unlike the previous 2 iterations of DC which has 5 flags, this one only has 1 flag.
+* I learnt from another walkthrough that we can identify the CMS behind the site through the header in the page's source, without using any tools at all:
+![](/screenshots/dc-3/siteWebServerCMSVersion.jpg)
+* Unlike the previous 2 iterations of DC which has 5 flags, this one only has **1 flag**.
 * I tried my luck on the login form with common login credentials such as `admin:admin` and `admin:password` which do not work as expected.
 * Moreover, the displayed error message does not reveal to us if the username exists or not, unlike WordPress which does.
 ![](/screenshots/dc-3/loginInvalidMessage.jpg)
@@ -30,13 +32,15 @@ By DCAU
 * Next, I tried to access the 4 directory listings that were shown and we are actually able to see the various directories and files within them!
 * This was my first encounter with the Joomla CMS and I was not quite sure what to look out for, even if I had access to directories and files, unlike for example WordPress - where I knew that I would hunt for files like wp-config.php.
 * However, we do know from `joomscan` that the Joomla CMS on this site was version `3.7.0`. I googled to see if there were exploits for this version of Joomla, and found the [Joomla Component Fields SQLi Remote Code Execution](https://www.rapid7.com/db/modules/exploit/unix/webapp/joomla_comfields_sqli_rce).
-* I opened `msfconsole` and ran `use exploit/unix/webapp/joomla_comfields_sqli_rce`. After running `show options`, I `set RHOST 10.0.2.8` (**to be edited**):
+* I learnt from another walkthrough that we could find out the version of the Joomla CMS via the `README.txt` file:
+![](/screenshots/dc-3/siteWebServerCMSVersion.jpg)
+* I opened `msfconsole` and ran `use exploit/unix/webapp/joomla_comfields_sqli_rce`. After running `show options`, I `set RHOST 10.0.2.8`:
 ![](/screenshots/dc-3/msfconsoleJoomlaOptions.jpg)
 * However, upon running `exploit`, we see that no session was created because there was "no logged-in Administrator or Super User user found":
 ![](/screenshots/dc-3/msfconsoleJoomlaExploitFailed.jpg)
 * This tells us that there are no users logged in at the moment, or at least there are no users which have administrative privileges who are logged in.
 * I googled further and found a proof-of-concept exploit for the same vulnerability at this [GitHub link](https://github.com/XiphosResearch/exploits/tree/master/Joomblah).
-* Clone the Git repository, and run `python joomblah.py http://10.0.2.8` (**to be edited**):
+* Clone the Git repository, and run `python joomblah.py http://10.0.2.8`:
 ![](/screenshots/dc-3/joomblahOutput.jpg)
 * Within a few seconds, we get to know that the user `admin` exists, along with his password hash `$2y$10$DpfpYjADpejngxNh9GnmCeyIHCWpL97CVRnGeZsVJwR0kWFlfB1Zu`.
 * I ran `hash-identifer` against the password hash and interestingly found no results:
@@ -88,3 +92,6 @@ By DCAU
 * Head to `/root` directory, and we find `the-flag.txt`:
 ![](/screenshots/dc-3/flag.jpg)
 * Hurray, we are done with this challenge!
+
+# Other walkthroughs visited #
+1. https://www.hackingarticles.in/dc-3-walkthrough/
