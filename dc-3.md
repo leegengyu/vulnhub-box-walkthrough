@@ -2,7 +2,7 @@
 [VulnHub link](https://www.vulnhub.com/entry/dc-3,312/)  
 By DCAU
 
-* As with DC: 1 and DC: 2, we are first greeted with a login page that requires users to specify both the username and the password: 
+* As with DC: 1 and DC: 2, we are first greeted with a login page that requires users to specify both the username and the password:
 ![](/screenshots/dc-3/loginInitial.jpg)
 * Common login credentials such as `admin:admin` and `admin:password` do not work.
 * Run `nmap 10.0.2.*`, where we find 5 live hosts:
@@ -31,18 +31,33 @@ By DCAU
 * And once again, there is no information leakage on whether we have a working username or not.
 * Next, I tried to access the 4 directory listings that were shown and we are actually able to see the various directories and files within them!
 * This was my first encounter with the Joomla CMS and I was not quite sure what to look out for, even if I had access to directories and files, unlike for example WordPress - where I knew that I would hunt for files like wp-config.php.
-* However, we do know from `joomscan` that the Joomla CMS on this site was version `3.7.0`. I googled to see if there were exploits for this version of Joomla, and found the [Joomla Component Fields SQLi Remote Code Execution](https://www.rapid7.com/db/modules/exploit/unix/webapp/joomla_comfields_sqli_rce).
-* I learnt from another walkthrough that we could find out the version of the Joomla CMS via the `README.txt` file:
+* However, we do know from `joomscan` that the Joomla CMS on this site was version `3.7.0`. Moreover, I learnt from another walkthrough that we could also have found out the version of the Joomla CMS via the `README.txt` file:
 ![](/screenshots/dc-3/siteWebServerCMSVersion.jpg)
+* I googled to see if there were exploits for this version of Joomla, and found the [Joomla Component Fields SQLi Remote Code Execution](https://www.rapid7.com/db/modules/exploit/unix/webapp/joomla_comfields_sqli_rce).
 * I opened `msfconsole` and ran `use exploit/unix/webapp/joomla_comfields_sqli_rce`. After running `show options`, I `set RHOST 10.0.2.8`:
 ![](/screenshots/dc-3/msfconsoleJoomlaOptions.jpg)
 * However, upon running `exploit`, we see that no session was created because there was "no logged-in Administrator or Super User user found":
 ![](/screenshots/dc-3/msfconsoleJoomlaExploitFailed.jpg)
 * This tells us that there are no users logged in at the moment, or at least there are no users which have administrative privileges who are logged in.
+* **Method 1: Using Existing Proof-of-Concept Exploit**
 * I googled further and found a proof-of-concept exploit for the same vulnerability at this [GitHub link](https://github.com/XiphosResearch/exploits/tree/master/Joomblah).
 * Clone the Git repository, and run `python joomblah.py http://10.0.2.8`:
 ![](/screenshots/dc-3/joomblahOutput.jpg)
 * Within a few seconds, we get to know that the user `admin` exists, along with his password hash `$2y$10$DpfpYjADpejngxNh9GnmCeyIHCWpL97CVRnGeZsVJwR0kWFlfB1Zu`.
+* **Method 2: Using sqlmap**
+* Alternatively, instead of using the proof-of-concept exploit, `searchsploit 3.7` led us to exploit `42033`, where there is a vulnerable URL given, as well as a command using `sqlmap`.
+* `sqlmap` is an automatic SQL injection tool, allowing us to gain access to information stored in databases using the right set of queries by the tool.
+* Modifying the `sqlmap` to our context gives us: `sqlmap -u "http://10.0.2.8/index.php?option=com_fields&view=fields&layout=modal&list[fullordering]=updatexml" --risk=3 --level=5 --random-agent --dbs -p list[fullordering]`.
+* I got prompted 3 times after running the command. Firstly, the detected back-end DBMS is `MySQL` and the prompt asked us if we want to skip test payloads for other DBMSes, to which I said yes, because it only made sense to do so for what is relevant. If we arrived at a dead-end subsequently, this might be something worth re-looking.
+* The second prompt asked us if we want to follow the redirect to `http://10.0.2.8:80/index.php/component/fields/`, which sqlmap received, to which I said yes. The SQL injection exploit here was fundamentally about the component fields portion.
+* The last prompt asked us if we wanted to keep testing the other parameters, since sqlmap had already found the GET parameter 'list[fullordering]' to be vulnerable. I gave a yes, but the command execution came to an end soon enough after that, so I guess there were not many other parameters to be tested.
+* Lastly, the command execution also told us that there were 5 entries in the database names, where `joomladb` appears to be of interest to us. We also now know that the MySQL version is >= `5.1`.
+![](/screenshots/dc-3/sqlmapDatabaseNames.jpg)
+* Running `sqlmap -u "http://10.0.2.8/index.php?option=com_fields&view=fields&layout=modal&list[fullordering]=updatexml" --risk=3 --level=5 --random-agent -D joomladb --tables --batch` gives us the list of tables in the `joomladb` database, where the `#__users` table is of concern to us because we wanted to find a valid set of user credentials:
+![](/screenshots/dc-3/sqlmapTableNames.jpg)
+* Next, we run `sqlmap -u "http://10.0.2.8/index.php?option=com_fields&view=fields&layout=modal&list[fullordering]=updatexml" --risk=3 --level=5 --random-agent -D joomladb -T '#__users' -C name,password --dump --batch` to find out the contents of table `#_users`:
+![](/screenshots/dc-3/sqlmapTableEntry.jpg)
+* The hash value in the table is the same as the one that we have found earlier.
 * I ran `hash-identifer` against the password hash and interestingly found no results:
 ![](/screenshots/dc-3/hashIdentifierAdmin.jpg)
 * I extracted the front portions of the hash, i.e. `$2y$` and ran a Google search against it. Wikipedia tells us that such a prefix in a hash string indicates that the hash is a "bcrypt hash in modular crypt format".
