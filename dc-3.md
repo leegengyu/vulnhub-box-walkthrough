@@ -39,11 +39,13 @@ By DCAU
 * However, upon running `exploit`, we see that no session was created because there was "no logged-in Administrator or Super User user found":
 ![](/screenshots/dc-3/msfconsoleJoomlaExploitFailed.jpg)
 * This tells us that there are no users logged in at the moment, or at least there are no users which have administrative privileges who are logged in.
+* Next, we will explore 2 steps of using the same vulnerability to obtain our next piece of information.
 * **Method 1: Using Existing Proof-of-Concept Exploit**
 * I googled further and found a proof-of-concept exploit for the same vulnerability at this [GitHub link](https://github.com/XiphosResearch/exploits/tree/master/Joomblah).
 * Clone the Git repository, and run `python joomblah.py http://10.0.2.8`:
 ![](/screenshots/dc-3/joomblahOutput.jpg)
 * Within a few seconds, we get to know that the user `admin` exists, along with his password hash `$2y$10$DpfpYjADpejngxNh9GnmCeyIHCWpL97CVRnGeZsVJwR0kWFlfB1Zu`.
+* Note: Reading `joomblah.py` reveals to us a series of steps required by the exploit that the creator has abstracted for us, so all we had to do was to run a simple python command. Such steps include extracting the joomla table, and its users, etc, which we will explore manually executing for ourselves (to a certain extent) in method 2.
 * **Method 2: Using sqlmap**
 * Alternatively, instead of using the proof-of-concept exploit, `searchsploit 3.7` led us to exploit `42033`, where there is a vulnerable URL given, as well as a command using `sqlmap`.
 * `sqlmap` is an automatic SQL injection tool, allowing us to gain access to information stored in databases using the right set of queries by the tool.
@@ -110,3 +112,4 @@ By DCAU
 
 # Other walkthroughs visited #
 1. https://www.hackingarticles.in/dc-3-walkthrough/
+2. https://s1gh.sh/vulnhub-dc-3/
