@@ -76,7 +76,7 @@ By DCAU
 * Note: I used the standard given `rockyou.txt` wordlist for this purpose.
 * Note: Running the command without `--force` for me resulted in this error:
 ![](/screenshots/dc-3/hashcatError.jpg)
-* Alternatively, using `john` involves such a command, `john --wordlist=/usr/share/wordlists/rockyou.txt crackThisHash.txt`, which is faster than `hashcat`:
+* Alternatively, using `john` involves such a command, `john --wordlist=/usr/share/wordlists/rockyou.txt crackThisHash.txt` (which is actually faster than `hashcat`):
 ![](/screenshots/dc-3/john.jpg)
 * We are now able to log in to `http://10.0.2.8/administrator/`:
 ![](/screenshots/dc-3/loginAdmin.jpg)
