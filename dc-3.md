@@ -49,21 +49,25 @@ By DCAU
 * **Method 2: Using sqlmap**
 * Alternatively, instead of using the proof-of-concept exploit, `searchsploit 3.7` led us to exploit `42033`, where there is a vulnerable URL given, as well as a command using `sqlmap`.
 * `sqlmap` is an automatic SQL injection tool, allowing us to gain access to information stored in databases using the right set of queries by the tool.
-* Modifying the `sqlmap` to our context gives us: `sqlmap -u "http://10.0.2.8/index.php?option=com_fields&view=fields&layout=modal&list[fullordering]=updatexml" --risk=3 --level=5 --random-agent --dbs -p list[fullordering]`.
+* Modifying the `sqlmap` to our context gives us: `sqlmap -u "http://10.0.2.8/index.php?option=com_fields&view=fields&layout=modal&list[fullordering]=updatexml" --risk=3 --level=5 --random-agent --dbs -p list[fullordering]`, which when executed shows:
+![](/screenshots/dc-3/sqlmapDatabaseNames.jpg)
+* Note: `--dbs` means to enumerate DBMS databases.
 * I got prompted 3 times after running the command. Firstly, the detected back-end DBMS is `MySQL` and the prompt asked us if we want to skip test payloads for other DBMSes, to which I said yes, because it only made sense to do so for what is relevant. If we arrived at a dead-end subsequently, this might be something worth re-looking.
 * The second prompt asked us if we want to follow the redirect to `http://10.0.2.8:80/index.php/component/fields/`, which sqlmap received, to which I said yes. The SQL injection exploit here was fundamentally about the component fields portion.
 * The last prompt asked us if we wanted to keep testing the other parameters, since sqlmap had already found the GET parameter 'list[fullordering]' to be vulnerable. I gave a yes, but the command execution came to an end soon enough after that, so I guess there were not many other parameters to be tested.
 * Lastly, the command execution also told us that there were 5 entries in the database names, where `joomladb` appears to be of interest to us. We also now know that the MySQL version is >= `5.1`.
-![](/screenshots/dc-3/sqlmapDatabaseNames.jpg)
 * Running `sqlmap -u "http://10.0.2.8/index.php?option=com_fields&view=fields&layout=modal&list[fullordering]=updatexml" --risk=3 --level=5 --random-agent -D joomladb --tables --batch` gives us the list of tables in the `joomladb` database, where the `#__users` table is of concern to us because we wanted to find a valid set of user credentials:
 ![](/screenshots/dc-3/sqlmapTableNames.jpg)
+* Note: `-D` allows us to specify the DBMS database to enumerate. `--tables` means to enumerate DBMS database tables.
 * Next, we run `sqlmap -u "http://10.0.2.8/index.php?option=com_fields&view=fields&layout=modal&list[fullordering]=updatexml" --risk=3 --level=5 --random-agent -D joomladb -T '#__users' -C name,password --dump --batch` to find out the contents of table `#_users`:
 ![](/screenshots/dc-3/sqlmapTableEntry.jpg)
+* Note: `-T` allows us to specify the DBMS database table(s) to enumerate. `-C` allows us to specify the DBMS database table column(s) to enumerate. `--dump` means to dump the specified DBMS database table entries.
+
 * The hash value in the table is the same as the one that we have found earlier.
 * I ran `hash-identifer` against the password hash and interestingly found no results:
 ![](/screenshots/dc-3/hashIdentifierAdmin.jpg)
 * I extracted the front portions of the hash, i.e. `$2y$` and ran a Google search against it. Wikipedia tells us that such a prefix in a hash string indicates that the hash is a "bcrypt hash in modular crypt format".
-* We will be using `hashcat`, ... **Find out if background of hashcat is required.**
+* We will be using `hashcat`, which is an advanced password recovery utility. This tool is similar to `john`, which was first used in HackInOS: 1. We are using a different tool here to try out something different.
 * I ran `hashcat --help` to find out what parameters we had to use, and the `Hash modes` list came up to be pretty long, so I ran `hashcat --help | grep bcrypt` to find out what number was the bcrypt hash mode, which turned out to be `3200`.
 * Insert the password hash into a text file (mine is `crackThisHash.txt`).
 * Run `hashcat -m 3200 crackThisHash.txt /usr/share/wordlists/rockyou.txt --force`:
@@ -72,10 +76,17 @@ By DCAU
 * Note: I used the standard given `rockyou.txt` wordlist for this purpose.
 * Note: Running the command without `--force` for me resulted in this error:
 ![](/screenshots/dc-3/hashcatError.jpg)
+* Alternatively, using `john` involves such a command, `john --wordlist=/usr/share/wordlists/rockyou.txt crackThisHash.txt`, which is faster than `hashcat`:
+![](/screenshots/dc-3/john.jpg)
 * We are now able to log in to `http://10.0.2.8/administrator/`:
 ![](/screenshots/dc-3/loginAdmin.jpg)
 * After logging in, I poked around the articles, categories, modules, plugins, etc. but did not quite seem to find information that was useful to me. This was my first time inside a Joomla CMS administrator panel and I was probably just groping in the dark.
-* I remembered the exploit session which we attempted earlier using `msfconsole` and decided to head back for a shot at it:
+* I did not actually realise this, but found out from another walkthrough that the only post on the site (that greeted us) has several history versions:
+![](/screenshots/dc-3/postHistory.jpg)
+* The version that is of note is dated `2019-03-25 04:13:24`, where the boxed-up portions are hints that are not mentioned in the published post:
+![](/screenshots/dc-3/postWithHints.jpg)
+* On hindsight, the hints may not have been much of a use to us. Hmm.
+* Moving on, I remembered the exploit session which we attempted earlier using `msfconsole` and decided to head back for a shot at it:
 ![](/screenshots/dc-3/msfconsoleJoomlaExploitSuccess.jpg)
 * We were able to establish a meterpreter session this time because we are logged in as `admin`.
 * Note: If you encounter the same error as before (no logged-in administrator user), refresh your administrator panel on your web browser to confirm that you are still logged in, just before you run `exploit`.
