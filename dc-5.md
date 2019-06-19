@@ -13,8 +13,21 @@ By DCAU
 ![](/screenshots/dc-5/hostFullScan.jpg)
 * Looking at the services which the vulnerable VM is running, we can see an nginx web server running on port 80 (which is open), as with the previous iteration of the dc series.
 * Opening `http://10.0.2.11` reveals a site with paragraphs of random sample texts greeting us:
-![](/screenshots/dc-4/siteWebServer.jpg)
-* Clicking on the various sections of the page on the bar near the top of the page brings us to more random sample texts, with the exception of `Contact` where there is a form (i.e. user inputs) and a submit button.
-* The `robots.txt` is not found (404) and the page source gives us nothing of interest, neither does running `uniscan`.
-* However, we do know that the nginx version which is running here is `1.6.2`, which is pretty much older than the `1.15.10` version in DC-4. There might be exploits relating to this version or older which we can use.
+![](/screenshots/dc-5/siteWebServer.jpg)
+* At this point in time, I could not be more stuck. I tried using Burp Suite on the Contact form as was done in the previous walkthrough for DC-4, but to no avail.
+* A hint that I got was that when I repeatedly submitted the Contact form, the copyright year at the bottom may differ:
+![](/screenshots/dc-5/copyrightYears.jpg)
+* It was either 2017, 2018, 2019 or 2020. Interesting. The copyright year on any of the other pages would be 2019.
+* Even when I was repeatedly refreshing `http://10.0.2.11/thankyou.php` which had no parameters, the year was still changing. A contact form that is submitted would result in the URL being `http://10.0.2.11/thankyou.php?firstname=&lastname=&country=australia&subject=`.
+* On hindsight, the only indication that I got from looking at the page source, is that the closing HTML tag for footer was rather out of place:
+![](/screenshots/dc-5/contactFormSubmitPageSource.jpg)
+* While I understood that we could modify the data (within the various options) being sent, what I did not know was that we could attempt our own options as well. Such an option would be `file`, where we would want to read the contents of specific files within the web server. It turns out that this vulnerability is called **Local File Inclusion** (LFI).
+* After understanding this, we will now attempt to get the contents of `/etc/passwd`, by entering `http://10.0.2.11/thankyou.php?file=/etc/passwd`:
+![](/screenshots/dc-5/etcPasswdFile.jpg)
+* Interestingly, if we did not include any file to load in the parameter, the footer contents would disappear, i.e. no Copyright © 2019 would be retrieved.
+* Also, `/etc/passwd` seems to be one of the common files used to test for LFI, because I guess virtually everyone would have that file on their web servers. Attempting to load a file that does not exist may lead us to be mistaken that LFI is not present.
+* As much as we now know a list of users, we do not have a login page or ssh to attempt our logins.
 * To-be-continued...
+
+# Other walkthroughs visited
+1. https://bzyo.github.io/dc-5/
