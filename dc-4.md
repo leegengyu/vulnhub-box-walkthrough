@@ -90,7 +90,22 @@ By DCAU
 * The confusion that I had was that I did not know exactly what `teehee` did. I ran the file and found that whatever I typed was repeated back to me. I typed in various commands but to no avail.
 * I ran `strings teehee` and found a whole lot of text within the file. I had also found that we could run `./teehee --help` to find out what it was exactly doing:
 ![](/screenshots/dc-4/teeheeHelp.jpg)
-* To-be-continued...
+* After digesting what it all meant, I ran `sudo teehee -a /etc/passwd`, before entering `fakeroot::0:0:::/bin/bash`, and then terminating the program.
+![](/screenshots/dc-4/addRootAccount.jpg)
+* The idea here was to make use of the ability of teehee to append to any file, and then add our own account (fakeroot in this case) with root privileges to `/etc/passwd`. The entry that I added was crafted with reference to root's entry. Essentially, no password is needed to access the account, and it will run `/bin/bash` upon login.
+* Run `su fakeroot` and volia, we have our root privileges:
+![](/screenshots/dc-4/suFakeRoot.jpg)
+* Note: Exiting as user charles and running `ssh fakeroot@10.0.2.10` still requires a password. I pressed the Enter key with entering any password, but to no avail. **Why is a password still required?**
+* Opening up `flag.txt`, we have come to the end of this challenge!
+![](/screenshots/dc-4/flag.jpg)
+
+# Concluding Remarks
+Despite the fact that this is the fourth challenge in the DC-series, the author @DCAU7 has made each challenge unique in its own rights. As usual, I have learnt tons!
+1. Learnt how to use Burp Suite to intercept and modify requests.
+2. Had more practice on using `hydra` (which I definitely needed).
+3. Learnt about `/var/mail` which is related to mail servers.
+4. Learnt to get root privileges without having to eventually log in as `root`.
+5. Reinforced previous concepts and methods such as `sudo -l`.
 
 # Other walkthroughs visited
 1. https://s1gh.sh/vulnhub-dc-4/
