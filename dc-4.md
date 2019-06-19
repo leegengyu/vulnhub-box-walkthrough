@@ -93,11 +93,24 @@ By DCAU
 * After digesting what it all meant, I ran `sudo teehee -a /etc/passwd`, before entering `fakeroot::0:0:::/bin/bash`, and then terminating the program.
 ![](/screenshots/dc-4/addRootAccount.jpg)
 * The idea here was to make use of the ability of teehee to append to any file, and then add our own account (fakeroot in this case) with root privileges to `/etc/passwd`. The entry that I added was crafted with reference to root's entry. Essentially, no password is needed to access the account, and it will run `/bin/bash` upon login.
+* Note: There are other methods to use teehee and escalate our privileges, 
 * Run `su fakeroot` and volia, we have our root privileges:
 ![](/screenshots/dc-4/suFakeRoot.jpg)
 * Note: Exiting as user charles and running `ssh fakeroot@10.0.2.10` still requires a password. I pressed the Enter key with entering any password, but to no avail. **Why is a password still required?**
 * Opening up `flag.txt`, we have come to the end of this challenge!
 ![](/screenshots/dc-4/flag.jpg)
+
+# Method 2 (teehee + crontab)
+* Credits goes to [s1gh](https://s1gh.sh/vulnhub-dc-4/). I did not quite understand it at first, probably because due to my lack of knowledge in how teehee had worked, as well as his use of symbolic links in Unix which taught me a great deal as well.
+* We see from `/etc/crontab` the list of commands that are executed at a specified frequency.
+![](/screenshots/dc-4/crontab.jpg)
+* The idea is that we will insert our choice of command into crontab through `teehee`, since we currently do not have write permissions to the file.
+* Run `sudo teehee /etc/crontab`, and then `* * * * * root chmod 4777 /bin/sh`. We do not use the append option of teehee because the file ends with a # character, which means that whatever that is appended to it is treated as a comment, and will not be executed. Without specifying any options, it means that we are replacing the entire file's contents with our one-liner here.
+* The entry placed into the crontab file means that universal permissions are given for /bin/sh, and that the cron job is executed every minute:
+![](/screenshots/dc-4/binShUniversal.jpg)
+* Next, simply run `/bin/sh`, and we are now `root`!
+![](/screenshots/dc-4/euidRoot.jpg)
+* Note: `s1gh` pointed out something which I did not know beforehand - that if `/bin/sh` is symbolically linked to `/bin/bash` then our second method will not work. This is because `bash` automatically drops setuid privileges. In this case, it is symbolically linked to `/bin/dash`, which does not drop setuid privileges.
 
 # Concluding Remarks
 Despite the fact that this is the fourth challenge in the DC-series, the author @DCAU7 has made each challenge unique in its own rights. As usual, I have learnt tons!
@@ -106,6 +119,8 @@ Despite the fact that this is the fourth challenge in the DC-series, the author 
 3. Learnt about `/var/mail` which is related to mail servers.
 4. Learnt to get root privileges without having to eventually log in as `root`.
 5. Reinforced previous concepts and methods such as `sudo -l`.
+6. Learnt how `/etc/crontab` functions.
 
 # Other walkthroughs visited
 1. https://s1gh.sh/vulnhub-dc-4/
+2. https://www.hackingarticles.in/dc-4-vulnhub-walkthrough/
