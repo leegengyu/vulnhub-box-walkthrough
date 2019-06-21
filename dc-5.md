@@ -22,6 +22,7 @@ By DCAU
 * On hindsight, the only indication that I got from looking at the page source, is that the closing HTML tag for footer was rather out of place:
 ![](/screenshots/dc-5/contactFormSubmitPageSource.jpg)
 * While I understood that we could modify the data (within the various options) being sent, what I did not know was that we could attempt our own options as well. Such an option would be `file`, where we would want to read the contents of specific files within the web server. It turns out that this vulnerability is called **Local File Inclusion** (LFI).
+* Here is a [great explanation](https://roguecod3r.wordpress.com/2014/03/17/lfi-to-shell-exploiting-apache-access-log/) on how we will be exploiting this vulnerability to get our shell, courtesy of roguecod3r (author of post) and byzo (who suggested this article in his walkthrough).
 * After understanding this, we will now attempt to get the contents of `/etc/passwd`, by entering `http://10.0.2.12/thankyou.php?file=/etc/passwd`:
 ![](/screenshots/dc-5/etcPasswdFile.jpg)
 * Interestingly, if we did not include any file to load in the parameter, the footer contents would disappear, i.e. no Copyright © 2019 would be retrieved.
@@ -87,6 +88,17 @@ By DCAU
 ![](/screenshots/dc-5/privilegeEscalated.jpg)
 * Congratulations, we are now `root`! Head to `/root`, and our flag is found in `thisistheflag.txt`:
 ![](/screenshots/dc-5/flag.jpg)
+
+# Concluding Remarks
+This challenge felt a lot shorter than any other vulnerable machines that we had attempted previously, but at the same time each step required a lot more targeted knowledge that one had to know, else it would be very hard to move forward.
+
+1. Learnt about exploiting Local File Inclusion (LFI).
+2. Learnt to deconstruct an exploit script, given that its original copy did not work for our circumstances.
+3. Learnt about SimpleHTTPServer in conjunction with wget.
+
+Does not seem like I learnt a lot in terms of quantity, but learning about LFI was a huge plus to me here!
+
+**Note to self: Consider exploring why the Copyright year kept changing upon submission of the contact form.**
 
 # Other walkthroughs visited
 1. https://bzyo.github.io/dc-5/
