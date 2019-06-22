@@ -9,3 +9,4 @@ This repository contains a list of CTFs/vulnerable virtual machines which I have
 6. DC: 3 (DCAU)
 7. DC: 4 (DCAU)
 8. DC: 5 (DCAU)
+9. DC: 6 (DCAU)
