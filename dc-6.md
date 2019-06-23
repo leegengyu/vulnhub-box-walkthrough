@@ -97,24 +97,56 @@ By DCAU
 ![](/screenshots/dc-6/failedPrivEscCheck.jpg)
 * Next, I remembered that we had several other user accounts on the WordPress CMS, and headed to `/home`, and found the directories named `graham`, `jens`, `mark` and `sarah`:
 ![](/screenshots/dc-6/homeDirectory.jpg)
+* Note: This concept of having several users' directories with different hints and content is the same as that for `dc-4`.
 * Going through the respective directories' contents, I found an interesting `things-to-do.txt` file in the directory `stuff` within the directory of `mark`:
 ![](/screenshots/dc-6/homeDirectoryContents.jpg)
 * Opening up mark's to-do list, we find the password of user `graham`, which is `GSo7isUM1D4`!
 ![](/screenshots/dc-6/thingsToDoTextFile.jpg)
 * It made sense - having the role of a `Help Desk`, `mark` would create new users for them.
-* I had also realised that there was a `backups.sh` within the directory of `jen`. However, running the script does not work at the moment, due to insufficient permissions:
+* I had also realised that there was a `backups.sh` within the directory of `jen`. Opening up the script to examine its contents shows us that it is supposed to upzip `backups.tar.gz` to `/var/www/html`, but it appears that the .tar.gz file was not in the directory - hmm.
+* Note: I re-downloaded the vulnerable VM and ran it fresh, just in case I messed something up - but the expected compressed file was still missing.
+![](/screenshots/dc-6/backupsScript.jpg)
+* However, running the script does not work at the moment, as expected because our current user is not `jens`, nor does our current user belong to group `devs`:
 ![](/screenshots/dc-6/jensBackupsErrorMessage.jpg)
 * Next, I decided to switch to user `graham`: `su graham`, and entered his password that we had just discovered.
 * Note: `su mark` with `helpdesk01` does not work.
-* I headed back to run `backups.sh`, after figuring out that `graham` belonged to the group `devs`, where those who were part of the group would have the same permissions as `jens`, the file creator in this case. However, the script was still unsuccessfully executed, but we made some headway still, as compared to running it as user `www-data`.
+* I headed back to run `backups.sh`, after figuring out that `graham` belonged to the group `devs`, where those who were part of the group would have the same permissions as `jens`, the file creator in this case. However, the script was still unsuccessfully executed, but we made some 'headway' still, as compared to running it as user `www-data`.
 ![](/screenshots/dc-6/jensBackupsErrorMessageGraham.jpg)
 * I ran `sudo -l` next, remembering that this command would probably work now, as compared to being executed under user `www-data`:
-![](/screenshots/dc-6/sudoCommands.jpg)
-* It turns out that the result of the command gave the same finding that we just derived - about `backups.sh`.
-* To-be-continued...
+![](/screenshots/dc-6/sudoCommandsGraham.jpg)
+* The output of `sudo -l` gave us just about the same finding that we had just derived - that we can run `backups.sh` as user `jens`.
+* At this point I thought that we are pretty much stuck because the `backups.tar.gz` file is missing from our directory. We cannot remove the shell script and replace it with our own because the permissions of our uploaded shell script would then be different.
+* I tried to use the `nano` text editor to edit `backups.sh` (since we had read, write and execute permissions for the file), but an error occured. `vi` did not seem to work properly, so I ran `echo /bin/sh > backups.sh` as a last resort.
+* The `echo` command would completely overwrite the contents of the file with our `/bin/sh` command.
+* Note: We can replace `/bin/bash` with `/bin/sh` - there is no difference between the two. **(to-be-confimed)**
+* Having said so, we would next run `backups.sh` as user `jens`, allowing us to spawn a shell with the identity of `jens`: `sudo -u jens ./backups.sh`.
+![](/screenshots/dc-6/escalateAsUserJens.jpg)
+* Next, I ran `sudo -l` to see what commands that we can run as another user, and it turns out that we can run `nmap` as `root`!
+![](/screenshots/dc-6/sudoCommandsJens.jpg)
+* Note: The use of `nmap` for privilege escalation is similar to `mr-robot-1`.
+* Its version is `7.4.0`, much newer than the `3.8.1` one we encountered before. Hence, we are unable to run `nmap --interactive` to escalate our privileges.
+![](/screenshots/dc-6/nmapVersionPrivilegeEscalation.jpg)
+* In that case, we have to find another way for privilege escalation.
+* Run these 3 commands:
+1. `TF=$(mktemp)` - create a temporary file in the `/tmp` directory, and then assign the name of this file to the `$TF` variable.
+2. `echo 'os.execute("/bin/sh")' > $TF` - the command is inserted into the temporary file using the `echo` command.
+3. `sudo nmap --script=$TF` - the script is executed with the help of `nmap`.
+* And we are `root`!
+![](/screenshots/dc-6/privilegeEscalationRoot.jpg)
+* Note: I was not entirely sure if I interpreted the 3 commands correctly as I had derived them from another walkthrough, without explanation.
+* Alternatively, create a file in `/tmp` ourselves, and then insert the command inside, before lastly executing `sudo nmap --script=shell.sh`. This made things clearer in my opinion.
+![](/screenshots/dc-6/nmapVersionPrivilegeEscalationAlternative.jpg)
+* Note: We cannot simply insert `/bin/sh` into the temporary file because the file's contents are interpreted in scripting language, rather than just a stand-alone command.
+* Note: Running `sudo nmap --script='os.execute("/bin/sh")'` instead of the 3 commands results in an error because the `--script=` parameter is expecting a filename or directory. Hence, we had to split the command up and executing them consecutively.
+* Note: Using `/bin/bash` instead gives a nicer interface to our newly spawned shell.
+![](/screenshots/dc-6/privilegeEscalationRootBash.jpg)
+* Head to `/root` directory, and open up `theflag.txt` - and we are done with the challenge!
+![](/screenshots/dc-6/flag.jpg)
 
 # Concluding Remarks
-To-be-added
+
+Learnt to re-visit previous knowledge and consolidate them.
+Learnt about other ways to escalate privileges with `nmap`.
 
 # Other walkthroughs visited
 1. https://www.hackingarticles.in/dc6-lab-walkthrough/
