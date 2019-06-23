@@ -89,12 +89,14 @@ By DCAU
 * I found this [article](http://sec.sangfor.com/vulns/321.html) to have given me a better understanding of how I can carry out the privilege escalation, as compared to the [Wordfence article](https://www.wordfence.com/blog/2016/04/user-role-editor-vulnerability/) that explained better the underlying code that resulted in the vulnerability.
 * Using Burp Suite, intercept the request when we press `Update Profile`, as user `mark`.
 * Concatenate the string `&ure_other_roles=administrator` (as explained in the article) to the end of the POST request.
+![](/screenshots/dc-6/burpSuiteAddAdminRole.jpg)
 * `Forward` the next couple of requests, and we will then see that we are now having the `administrator` role!
 ![](/screenshots/dc-6/userRoleEditorPluginPrivEsc.jpg)
 * Get a reverse shell by uploading the code contents to either themes or plugins, and catch it using `netcat`. I did not manage to get this part working because of this error despite multiple attempts:
 ![](/screenshots/dc-6/wordPressReverseShellError.jpg)
 * Note: I could have uploaded a `malicious-wordpress-plugin` instead (which I did not attempt), but wanted to try my hand at a direct edit, which worked before.
 
+# After getting our shell
 * We have our shell now, and we are user `www-data` as expected.
 * Run `python -c 'import pty; pty.spawn("/bin/bash")'` to spawn our interactive TTY shell.
 * Next, run `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we can possibly exploit:
@@ -155,9 +157,13 @@ By DCAU
 ![](/screenshots/dc-6/flag.jpg)
 
 # Concluding Remarks
+There were some methods that I had missed out when attempting this challenge, although they should have been pretty obvious given that I had attempted them in one way or another before. This led to me digging down holes which I should not have done so.
 
-Learnt to re-visit previous knowledge and consolidate them.
-Learnt about other ways to escalate privileges with `nmap`.
+Overall, nothing too challenging given what we had conquered before, except the last part for me.
+
+1. Learnt to re-visit previous knowledge and consolidate them.
+2. Learnt about other ways to escalate privileges with `nmap`.
 
 # Other walkthroughs visited
 1. https://www.hackingarticles.in/dc6-lab-walkthrough/
+2. https://windsorwebdeveloper.com/dc-6-vulnhub-walkthrough/
