@@ -10,3 +10,4 @@ This repository contains a list of CTFs/vulnerable virtual machines which I have
 7. DC: 4 (DCAU)
 8. DC: 5 (DCAU)
 9. DC: 6 (DCAU)
+10. Stapler: 1 (g0tmi1k)
