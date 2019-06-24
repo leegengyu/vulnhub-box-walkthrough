@@ -43,7 +43,12 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/gobusterResultsWordPress.jpg)
 * Note: `robots.txt` file could not be found.
 * Run `hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.0.2.14/wordpress http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'` to attempt to get user `admin`'s password.
-* To-be-continued
+* To-be-continued...
+
+# SSH at Port 22
+* Learning my lesson from `stapler` where I will now attempt to connect through SSH, I found that there is also a custom banner that greets us, although with not-so-useful information:
+![](/screenshots/lazysysadmin/sshAttemptedLogin.jpg)
+* Though, it is mentioned that this is `Web_TR1`, and we see from the WordPress site at port 80 that it is `Web_TR2`. Not sure what TR means but they are very likely to be linked.
 
 # Concluding Remarks
 1. To-be-added
