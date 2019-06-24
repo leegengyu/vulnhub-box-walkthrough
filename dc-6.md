@@ -25,7 +25,7 @@ By DCAU
 * But before we do so, let us use Burp Suite to confirm the parameters that we are sending as part of a login attempt:
 ![](/screenshots/dc-6/wordPressLoginBurpSuiteIntercept.jpg)
 * There is also a hint given by the author of this challenge in the page under the `Clue` section that we should run `cat /usr/share/wordlists/rockyou.txt | grep k01 > passwords.txt` to save time. `rockyou.txt` by itself is a huge wordlist and the author wants us to focus our efforts in solving other parts of the challenge, by not spending too much time on the dictionary attack. The curated wordlist that we are using contains only words with the substring `k01`, and has only 2668 entries.
-* Run `hydra -l admin -P passwords.txt wordy http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'.
+* Run `hydra -l admin -P passwords.txt wordy http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'`.
 * It turns out that admin's password is not within the list. Some other user's password is likely to be within it though. Run `wpscan --url http://wordy --enumerate u`:
 ![](/screenshots/dc-6/wordPressUserList.jpg)
 * There are 4 users whom we were unaware of previously: `sarah`, `graham`, `mark` and `jens`. Let us add them into `usernames.txt`.
