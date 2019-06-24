@@ -12,6 +12,8 @@ By Togie Mcdogie
 * Run `nmap -p- -A 10.0.2.14`:
 ![](/screenshots/lazysysadmin/hostFullScan.jpg)
 * Looking at the services which the vulnerable VM is running, for a start we can see OpenSSH running at port 22 and an Apache web server running on port 80.
+
+# Apache Web Server at Port 80
 * Visiting `http://10.0.2.14` shows us a non-standard site, i.e. it is not simply taken entirely from a template:
 ![](/screenshots/lazysysadmin/siteWebServer.jpg)
 * It appears that the site is powered by Silex.
@@ -33,7 +35,9 @@ By Togie Mcdogie
 * Since this is a WordPress site, let us try to visit `http://10.0.2.14/wordpress/wp-login.php` - which gives us our login page for this CMS! An invalid login attempt with username being `admin` confirms that the user exists.
 * Running `wpscan -v --url http://10.0.2.14/wordpress` tells us that the WordPress version is `4.8.1`, and that there are 27 vulnerabilities detected:
 ![](/screenshots/lazysysadmin/wpscan.jpg)
-* Side-track: Assuming we could log in as a low-level user, we could execute [WordPress 3.7-5.0 (except 4.9.9) - Authenticated Code Execution](https://wpvulndb.com/vulnerabilities/9222). However, we see in the next scan that we have only got the `admin` user account available.
+* Vulnerabilities that we cannot exploit due to circumstances:
+1. WordPress 3.7-5.0 (except 4.9.9) - Authenticated Code Execution: we do not have credentials to a low-level user, only `admin`.
+2. WordPress 2.3-4.8.3 - Host Header Injection in Password Reset: entering `admin` when trying to `Get New Password` results in - The email could not be sent. Possible reason: your host may have disabled the mail() function.
 * Running `wpscan --url http://10.0.2.14/wordpress --enumerate u` tells us that the scanner could only find one username `admin` for the CMS:
 ![](/screenshots/lazysysadmin/wpscanEnumUsers.jpg)
 * Note: I tried `togie` as a username since there were many lines of it in the `Hello world!` post, but it does not exist.
@@ -42,13 +46,20 @@ By Togie Mcdogie
 * I ran `gobuster -e -u http://10.0.2.14/wordpress -w /usr/share/wordlists/dirb/common.txt` to see if there were unexplored files and directories but nothing interesting came up as well:
 ![](/screenshots/lazysysadmin/gobusterResultsWordPress.jpg)
 * Note: `robots.txt` file could not be found.
-* Run `hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.0.2.14/wordpress http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'` to attempt to get user `admin`'s password.
+* Run `hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.0.2.14/wordpress http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'` to attempt to get user `admin`'s password. Update: Did not manage to find any password after awhile - do not think that the password can be obtained this way.
 * To-be-continued...
 
 # SSH at Port 22
 * Learning my lesson from `stapler` where I will now attempt to connect through SSH, I found that there is also a custom banner that greets us, although with not-so-useful information:
 ![](/screenshots/lazysysadmin/sshAttemptedLogin.jpg)
 * Though, it is mentioned that this is `Web_TR1`, and we see from the WordPress site at port 80 that it is `Web_TR2`. Not sure what TR means but they are very likely to be linked.
+* Attempting an SSH login later on (because I found out that `togie` could be a possible username) leads to this message that forces us to remove the offending ECDSA key. I had never seen this before, but I am guessing that this might be a measure to block brute-force attempts(?) Or perhaps it was simply something that I had triggered.
+![](/screenshots/lazysysadmin/sshChangeKey.jpg)
+
+# NetBIOS-SSN Samba SMBD at Port 139
+* Running `enum4linux 10.0.2.15` (**TBE**) reveals that `togie` is a username. The author of this vulnerable VM shares the same name, and we had seen the same name in the `Hello world!` post on the WordPress site.
+![](/screenshots/lazysysadmin/enum4linuxResults.jpg)
+* At this point in time, I am not sure if there are other valuable pieces of information from the scan results (it is quite long) because this is only my second time encountering this.
 
 # Concluding Remarks
 1. To-be-added
