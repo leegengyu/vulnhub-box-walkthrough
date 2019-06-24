@@ -63,6 +63,17 @@ By g0tmi1k
 * Trying to list the allowed commands for `SHayslett` is forbidden:
 ![](/screenshots/stapler/allowedCommandsSHayslett.jpg)
 * I did not know that such a restriction was possible, as we had always been successfully running this command when logged in as a user besides `www-data`.
+* At this point in time, I had already attempted to access the web servers (see below), but could not manage to find any useful information. So let us go to `/var/www/https`:
+![](/screenshots/stapler/webServerDirectoryContents.jpg)
+* Opening up `custom_400.html`, we see that it is the page that had been greeting us (with status code 400).
+* There is also an `index.html`, which states `Internal Index Page!`.
+* The next file of interest is `robots.txt`, which states `Disallow: /admin112233/` and `Disallow: /blogblog/`. Let us explore those 2 respective directories.
+* 
+
+* 
+![](/screenshots/stapler/htAccess.jpg)
+
+* 
 
 # NetBIOS-SSN Samba SMBD at Port 139
 * This is even newer to me than FTP, with my only knowledge about this being that ports 137 to 139 are used for NetBIOS (Network Basic Input/Output System).
@@ -76,6 +87,23 @@ By g0tmi1k
 * The wordlist is very small, with only 30 lines:
 ![](/screenshots/stapler/wordlistFromNetBIOS.jpg)
 * We will then use this wordlist to attack for a set of FTP credentials (see above section).
+* `searchsploit samba` gives us a list of results:
+![](/screenshots/stapler/searchsploitSamba.jpg)
+* Since the Samba version that we are working with is `4.3.9`, the only one that stood out is `'is_known_pipename()' Arbitrary Module Load`.
+* Heading to `msfconsole`, `search samba` reveals a shorter list, where we will `use exploit/linux/samba/is_known_pipename`.
+![](/screenshots/stapler/msfconsoleSearchSamba.jpg)
+* Set `RHOSTS` to the IP address of the vulnerable VM, and `RPORT` to 139:
+![](/screenshots/stapler/msfconsoleOptionsSamba.jpg)
+* Note: I had always thought that SMB would be run on port 445, but here it is on 139 with NetBIOS (**find out how this works**).
+* And we are now `root`!
+![](/screenshots/stapler/msfconsoleExploitSamba.jpg)
+* Run `python -c 'import pty; pty.spawn("/bin/bash")'` to spawn our interactive TTY shell.
+* Head to `/root` directory, and we find `flag.txt`:
+![](/screenshots/stapler/rootDirectoryContents.jpg)
+* Here is our flag:
+![](/screenshots/stapler/flag.jpg)
+* The string at the end of the file `b6b545dc11b7a270f4bad23432190c75162c4a2b` is a hash, but running it on online hash crackers do not yield anything.
+![](/screenshots/stapler/flagHash.jpg)
 
 # Web Server at Port 80 and 12380
 * Visiting `http://10.0.2.18` results in a Not Found error. It appears to be a PHP client server running at port 80:
@@ -110,4 +138,5 @@ Encountering a vulnerable machine with so many services makes things more challe
 1. To-be-added
 
 # Other walkthroughs visited
-1. To-be-added
+1. https://download.vulnhub.com/stapler/slides.pdf
+2. https://medium.com/@Kan1shka9/stapler-1-walkthrough-e1f2a667ea4
