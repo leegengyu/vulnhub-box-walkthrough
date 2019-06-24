@@ -11,3 +11,4 @@ This repository contains a list of CTFs/vulnerable virtual machines which I have
 8. DC: 5 (DCAU)
 9. DC: 6 (DCAU)
 10. Stapler: 1 (g0tmi1k)
+11. LazySysAdmin: 1 (Togie Mcdogie)
