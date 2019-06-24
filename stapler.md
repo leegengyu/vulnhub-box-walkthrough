@@ -68,12 +68,9 @@ By g0tmi1k
 * Opening up `custom_400.html`, we see that it is the page that had been greeting us (with status code 400).
 * There is also an `index.html`, which states `Internal Index Page!`.
 * The next file of interest is `robots.txt`, which states `Disallow: /admin112233/` and `Disallow: /blogblog/`. Let us explore those 2 respective directories.
-* 
-
-* 
+* To-be-continued...
+* This is probably the file that resulted in the additional response header about Dave:
 ![](/screenshots/stapler/htAccess.jpg)
-
-* 
 
 # NetBIOS-SSN Samba SMBD at Port 139
 * This is even newer to me than FTP, with my only knowledge about this being that ports 137 to 139 are used for NetBIOS (Network Basic Input/Output System).
@@ -122,11 +119,24 @@ By g0tmi1k
 * According to what I found from Google, a Bad Request is due to our invalid request that the server is unable to process.
 * Not sure if it is due to my knowledge gap or if it is truly something that I had missed, but I do not seem to be able to find anything wrong in the request headers.
 * I had also tried to send only the first 2 lines of the original request, which contains only the GET request and the host address (in case any of the other headers were invalid), but to no avail.
+* It turns out that we need to access the web server on port 12380 with `https`!
+![](/screenshots/stapler/siteWebServer12380.jpg)
+* When accessing the site for the first time using https, we need to accept a certificate: (**insert screenshot**)
 * `use auxiliary/scanner/http/apache_optionsbleed` on `msfconsole` (where this version of Apache HTTP server is affected by) did not work here either.
 
 # Doom at Port 666
 * Visiting `http://10.0.2.18:666/` (running service Doom, which I have no idea what it truly is) results in a page displaying unreadable information:
 ![](/screenshots/stapler/portDoom.jpg)
+* `wget http://10.0.2.13:666` allows us to download a local copy of the file, where `file` tells us that it is a .zip file.
+![](/screenshots/stapler/file666.jpg)
+* I found out from `windsorwebdeveloper` that `PK` at the beginning of the file is a sign that it is a zip file.
+* `unzip index.html` gives us `message2.jpg`. Running `file` confirms that it is a JPEG file.
+![](/screenshots/stapler/unzip666.jpg)
+* Opening `message2.jpg` shows us:
+![](/screenshots/stapler/file666Message2.jpg)
+* I would have totally left this out, but running `strings` on the jpg file also gave us additional information (about a cookie):
+![](/screenshots/stapler/file666Message2Strings.jpg)
+* Conclusion: Hmm, nonetheless, I suspect this entire port and service was to just throw us off the main path.
 
 # MySQL at Port 3306
 * Running on version `5.7.12-0ubuntu1`, I found an [exploit](https://www.exploit-db.com/exploits/40679) that would work on it, provided that we could get credentials to a system account.
@@ -135,8 +145,12 @@ By g0tmi1k
 # Concluding Remarks
 Encountering a vulnerable machine with so many services makes things more challenging in my opinion because there appears to be so many attack vectors that we can target.
 
-1. To-be-added
+1. Learnt to stay focus on one at a time eventually, because I was all-over-the-place at the beginning.
+2. Learnt how to access FTP and how it works.
+3. Learnt about enumerating NetBIOS and Samba at port 139 and how it works.
+4. To-be-continued.
 
 # Other walkthroughs visited
 1. https://download.vulnhub.com/stapler/slides.pdf
 2. https://medium.com/@Kan1shka9/stapler-1-walkthrough-e1f2a667ea4
+3. https://windsorwebdeveloper.com/stapler-1-vulnhub-walkthrough/
