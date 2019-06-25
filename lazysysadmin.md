@@ -28,6 +28,9 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/phpMyAdminPage.jpg)
 * Attempting a login results in an error, stating that we are unable to log in to the MySQL server because the connection failed. I guess there is no chance for us to do a wordlist attack here for now then.
 ![](/screenshots/lazysysadmin/phpMyAdminPageAttemptedLogin.jpg)
+* Googling about this error leads to proposed solutions of reinstalling phpMyAdmin, probably because of misconfigurations in settings.
+* Running `gobuster -e -u http://10.0.2.14/phpmyadmin -w /usr/share/wordlists/dirb/common.txt` does not yield much useful information:
+![](/screenshots/lazysysadmin/gobusterPhpMyAdmin.jpg)
 * `/wordpress` brings us to another site:
 ![](/screenshots/lazysysadmin/wordpressTR2.jpg)
 * The post titled `Hello world!` is posted by user `admin`:
@@ -46,7 +49,7 @@ By Togie Mcdogie
 * I ran `gobuster -e -u http://10.0.2.14/wordpress -w /usr/share/wordlists/dirb/common.txt` to see if there were unexplored files and directories but nothing interesting came up as well:
 ![](/screenshots/lazysysadmin/gobusterResultsWordPress.jpg)
 * Note: `robots.txt` file could not be found.
-* Run `hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.0.2.14/wordpress http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'` to attempt to get user `admin`'s password. Update: Did not manage to find any password after awhile - do not think that the password can be obtained this way.
+* Run `hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.0.2.14 http-form-post '/wordpress/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'` to attempt to get user `admin`'s password. Update: Did not manage to find any password after awhile - do not think that the password can be obtained this way.
 * To-be-continued...
 
 # SSH at Port 22
@@ -54,11 +57,23 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/sshAttemptedLogin.jpg)
 * Though, it is mentioned that this is `Web_TR1`, and we see from the WordPress site at port 80 that it is `Web_TR2`. Not sure what TR means but they are very likely to be linked.
 * Attempting an SSH login later on (because I found out that `togie` could be a possible username) leads to a message that forces us to remove the offending ECDSA key. I had never seen such a message before, but I am guessing that this might be a measure to block brute-force attempts(?) Or perhaps it was simply something that I had triggered.
+* `OpenSSH < 6.6 SFTP - Command Execution` does not work for us because we do not have a set of credentials (i.e. no authenticated session at all).
 
 # NetBIOS-SSN Samba SMBD at Port 139
 * Running `enum4linux 10.0.2.14` reveals that `togie` is a username. The author of this vulnerable VM shares the same name, and we had seen the same name in the `Hello world!` post on the WordPress site.
 ![](/screenshots/lazysysadmin/enum4linuxResults.jpg)
 * At this point in time, I am not sure if there are other valuable pieces of information from the scan results (it is quite long) because this is only my second time encountering this.
+* `exploit/linux/samba/is_known_pipename` which worked for us previously in `stapler` does not work here because there is **no writable share** here.
+
+# MySQL at Port 3306
+* This is the error encountered when we try to connect to the MySQL server, which probably explains why we see `MySQL (unauthorized)` when doing our `nmap` scan earlier.
+![](/screenshots/lazysysadmin/mysqlAttemptedConnect.jpg)
+
+# IRC at Port 6667
+* Taking reference from this [article](https://www.hackingtutorials.org/metasploit-tutorials/hacking-unreal-ircd-3-2-8-1/) that I had found, I installed `hexchat` with `apt update && apt install -y hexchat`
+* Next, after following the instructions to configure and connect, this is what I got:
+![](/screenshots/lazysysadmin/ircConnect.jpg)
+* We got the information that `InspIRCd-2.0` is running on the port.
 
 # Concluding Remarks
 1. To-be-added
