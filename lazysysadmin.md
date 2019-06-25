@@ -16,14 +16,17 @@ By Togie Mcdogie
 # Apache Web Server at Port 80
 * Visiting `http://10.0.2.14` shows us a non-standard site, i.e. it is not simply taken entirely from a template:
 ![](/screenshots/lazysysadmin/siteWebServer.jpg)
-* It appears that the site is powered by Silex.
+* It appears that the site is powered by `Silex`.
+* Maybe because the number of users of Silex is little, because `searchsploit silex` throws up nothing.
 * Opening up the `robots.txt` file shows us:
 ![](/screenshots/lazysysadmin/robotsTxt.jpg)
 * `/old` and `/test` are empty directories, while `/TR2` is not found. The last directory, `/Backnode_files` is the only directory that is useful. It contains the files (e.g. images) that we see on the front page)
 ![](/screenshots/lazysysadmin/backnodeFilesDirectory.jpg)
 * I ran `gobuster -e -u http://10.0.2.14 -w /usr/share/wordlists/dirb/common.txt` to find out if there were other files and directories that we could access:
 ![](/screenshots/lazysysadmin/gobusterResults.jpg)
-* There are 2 results that stood out: `/phpmyadmin` and `/wordpress`.
+* There are 3 results that stood out: `info.php`, `/phpmyadmin` and `/wordpress`.
+* `info.php` shows a whole page of PHP information - not sure if there is supposed to be anything noteworthy in here:
+![](/screenshots/lazysysadmin/infoPHP.jpg)
 * `/phpmyadmin` page shows a login page:
 ![](/screenshots/lazysysadmin/phpMyAdminPage.jpg)
 * Attempting a login results in an error, stating that we are unable to log in to the MySQL server because the connection failed. I guess there is no chance for us to do a wordlist attack here for now then.
@@ -41,6 +44,7 @@ By Togie Mcdogie
 * Vulnerabilities that we cannot exploit due to circumstances:
 1. WordPress 3.7-5.0 (except 4.9.9) - Authenticated Code Execution: we do not have credentials to a low-level user, only `admin`.
 2. WordPress 2.3-4.8.3 - Host Header Injection in Password Reset: entering `admin` when trying to `Get New Password` results in - The email could not be sent. Possible reason: your host may have disabled the mail() function.
+* Note: While I got the version of `4.8.1`, the next day that I ran the same `wpscan` command resulted in the **entire list of vulnerabilities disappearing** because the detected version is now `4.8.9`. Hmm? I read from another walkthrough that the version they got is `4.8.2`.
 * Running `wpscan --url http://10.0.2.14/wordpress --enumerate u` tells us that the scanner could only find one username `admin` for the CMS:
 ![](/screenshots/lazysysadmin/wpscanEnumUsers.jpg)
 * Note: I tried `togie` as a username since there were many lines of it in the `Hello world!` post, but it does not exist.
@@ -63,6 +67,13 @@ By Togie Mcdogie
 * Running `enum4linux 10.0.2.14` reveals that `togie` is a username. The author of this vulnerable VM shares the same name, and we had seen the same name in the `Hello world!` post on the WordPress site.
 ![](/screenshots/lazysysadmin/enum4linuxResults.jpg)
 * At this point in time, I am not sure if there are other valuable pieces of information from the scan results (it is quite long) because this is only my second time encountering this.
+* Turns out that there is - the `Share Enumeration` section. We see that there's the printer drivers, and the web server, but `Sumshare` stands out.
+![](/screenshots/lazysysadmin/enum4linuxShareEnum.jpg)
+* Accessing `smb://10.0.2.14/` leads us to this. We see `print$` and `share$` which were 2 sharenames in our enumeration earlier. Clicking into `share$` leads us to a login page of sorts:
+![](/screenshots/lazysysadmin/smbShareLogin.jpg)
+* I attempted to connect as `Anonymous` and the connection was successful! (Note: we are denied entry if we do the same for `print$`)
+![](/screenshots/lazysysadmin/smbShareDirectory.jpg)
+* To-be-continued...
 * `exploit/linux/samba/is_known_pipename` which worked for us previously in `stapler` does not work here because there is **no writable share** here.
 
 # MySQL at Port 3306
@@ -79,4 +90,5 @@ By Togie Mcdogie
 1. To-be-added
 
 # Other walkthroughs visited
-1. To-be-added
+1. https://grokdesigns.com/vulnhub-walkthrough-lazysysadmin-1/
+2. To-be-added
