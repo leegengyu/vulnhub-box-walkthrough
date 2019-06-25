@@ -53,11 +53,10 @@ By Togie Mcdogie
 * Learning my lesson from `stapler` where I will now attempt to connect through SSH, I found that there is also a custom banner that greets us, although with not-so-useful information:
 ![](/screenshots/lazysysadmin/sshAttemptedLogin.jpg)
 * Though, it is mentioned that this is `Web_TR1`, and we see from the WordPress site at port 80 that it is `Web_TR2`. Not sure what TR means but they are very likely to be linked.
-* Attempting an SSH login later on (because I found out that `togie` could be a possible username) leads to this message that forces us to remove the offending ECDSA key. I had never seen this before, but I am guessing that this might be a measure to block brute-force attempts(?) Or perhaps it was simply something that I had triggered.
-![](/screenshots/lazysysadmin/sshChangeKey.jpg)
+* Attempting an SSH login later on (because I found out that `togie` could be a possible username) leads to a message that forces us to remove the offending ECDSA key. I had never seen such a message before, but I am guessing that this might be a measure to block brute-force attempts(?) Or perhaps it was simply something that I had triggered.
 
 # NetBIOS-SSN Samba SMBD at Port 139
-* Running `enum4linux 10.0.2.15` (**TBE**) reveals that `togie` is a username. The author of this vulnerable VM shares the same name, and we had seen the same name in the `Hello world!` post on the WordPress site.
+* Running `enum4linux 10.0.2.14` reveals that `togie` is a username. The author of this vulnerable VM shares the same name, and we had seen the same name in the `Hello world!` post on the WordPress site.
 ![](/screenshots/lazysysadmin/enum4linuxResults.jpg)
 * At this point in time, I am not sure if there are other valuable pieces of information from the scan results (it is quite long) because this is only my second time encountering this.
 
