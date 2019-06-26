@@ -149,12 +149,12 @@ for ($i = 1; $i <= 100; $i++) {
 ![](/screenshots/hackinos-1/flagFinal.jpg)
 * Hurray, we are done for this exercise!
 
-# Docker Image for Privilege Escalation #
+# Docker Image for Privilege Escalation
 * To-be-continued...
 
-# To-be-added subsequently #
+# To-be-added subsequently
 * Write our hash-generation script using other languages such as Python.
 
-# Other walkthroughs visited #
+# References
 1. https://windsorwebdeveloper.com/hackinos-1-vulnhub-walkthrough/
 2. https://medium.com/infosec-adventures/hackinos-walkthrough-3c37844f44a9

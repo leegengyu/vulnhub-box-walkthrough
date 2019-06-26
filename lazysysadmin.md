@@ -51,6 +51,7 @@ By Togie Mcdogie
 1. WordPress 3.7-5.0 (except 4.9.9) - Authenticated Code Execution: we do not have credentials to a low-level user, only `admin`.
 2. WordPress 2.3-4.8.3 - Host Header Injection in Password Reset: entering `admin` when trying to `Get New Password` results in - The email could not be sent. Possible reason: your host may have disabled the mail() function.
 * Note: While I got the version of `4.8.1`, the next day that I ran the same `wpscan` command resulted in the **entire list of vulnerabilities disappearing** because the detected version is now `4.8.9`. Hmm? I read from another walkthrough that the version they got is `4.8.2`.
+* Note2: After getting root, I re-imported the vulnerable VM into VirtualBox, did a `wpscan`, logged in as `admin`, and both the scan and dashboard told me that the version is `4.8.1`.
 * Running `wpscan --url http://10.0.2.14/wordpress --enumerate u` tells us that the scanner could only find one username `admin`:
 ![](/screenshots/lazysysadmin/wpscanEnumUsers.jpg)
 * Note: I tried `togie` as a WordPress account username since there were many lines of it in the `Hello world!` post, but it does not exist.

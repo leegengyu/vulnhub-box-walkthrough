@@ -58,7 +58,7 @@ Explanation of how the `hydra` command works:
 * Note: We cannot use the string `Error` to distinguish because even if we get a valid username, the page will still flag it as a negative result because the result page will still contain an error message, since the password is incorrect. Thus, we will only get negatives from the hydra scan.
 * Having found an existing username `elliot` for the WordPress site, our next step is to brute-force the password for that account.
 
-# Brute-force elliot's password using hydra #
+# Brute-force elliot's password using hydra
 * We will similarly use `hydra` to brute-force the password for user `elliot`. However, before we begin the brute-forcing process, we have to realise that there are 858,160 lines in the dictionary wordlist (run `wc -l fsocity.dic` to find out), which means that hydra will try a total of 858,160 passwords.
 * During the first 1 minute, hydra made around 1,100 attempts on my Kali VM (with the additional parameters of `-t 40 -w 1`: 40 connects in parallel and maximum 1 second wait for responses). The worst-case scenario of trying every single line as a password is that it would take around 12 hours to crack the password, which is way too long.
 * Let us examine the dictionary wordlist to see if we are able to reduce the number of attempts that we have to make in the worst-case scenario.
@@ -68,7 +68,7 @@ Explanation of how the `hydra` command works:
 * It took around 10 minutes for me to get the password `ER28-0652`.
 * To-do: *Perhaps find some alternative configuration to speed up the brute-forcing process because `wpscan` took only a minute vs. hydra's 10 minutes*.
 
-# Brute-force elliot's password using wpscan #
+# Brute-force elliot's password using wpscan
 * Use `wpscan` instead to brute-force the password for user elliot: run `wpscan --url 10.0.2.5 --usernames elliot --passwords fsocity2.dic`:
 ![](/screenshots/mr-robot-1/wpScanBruteForcePassword.jpg)
 * It took only around a minute to get the password `ER28-0652`, which was way faster than our attempt using `hydra`.
@@ -108,12 +108,12 @@ Explanation of how the `hydra` command works:
 ![](/screenshots/mr-robot-1/rootDirectory.jpg)
 * There is also a file `firstboot_done`, which probably indicates to us that we are now done with this challenge (now that we have gotten all 3 keys as well)!
 
-# Keys obtained #
+# Keys obtained
 * Key 1: 073403c8a58a1f80d943455fb30724b9
 * Key 2: 822c73956184f694993bede3eb39f959
 * Key 3: 04787ddef27c3dee1ee161b21670b4e4
 
-# Other walkthroughs visited #
+# References
 1. https://securitybytes.io/vulnhub-com-mr-robot-1-ctf-walkthrough-7d4800fc605a
 2. https://5h4d0wb0y.github.io/2017-05-08-mr-robot1/
 3. https://scriptkidd1e.wordpress.com/mr-robot-1-vulnhubs-vm-walkthrough/

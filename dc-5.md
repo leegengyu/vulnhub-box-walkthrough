@@ -100,5 +100,5 @@ Does not seem like I learnt a lot in terms of quantity, but learning about LFI w
 
 **Note to self: Consider exploring why the Copyright year kept changing upon submission of the contact form.**
 
-# Other walkthroughs visited
+# References
 1. https://bzyo.github.io/dc-5/

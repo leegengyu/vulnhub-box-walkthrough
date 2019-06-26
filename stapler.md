@@ -150,7 +150,7 @@ Encountering a vulnerable machine with so many services makes things more challe
 3. Learnt about enumerating NetBIOS and Samba at port 139 and how it works.
 4. To-be-continued.
 
-# Other walkthroughs visited
+# References
 1. https://download.vulnhub.com/stapler/slides.pdf
 2. https://medium.com/@Kan1shka9/stapler-1-walkthrough-e1f2a667ea4
 3. https://windsorwebdeveloper.com/stapler-1-vulnhub-walkthrough/

@@ -121,6 +121,6 @@ Despite the fact that this is the fourth challenge in the DC-series, the author 
 5. Reinforced previous concepts and methods such as `sudo -l`.
 6. Learnt how `/etc/crontab` functions.
 
-# Other walkthroughs visited
+# References
 1. https://s1gh.sh/vulnhub-dc-4/
 2. https://www.hackingarticles.in/dc-4-vulnhub-walkthrough/

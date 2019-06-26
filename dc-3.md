@@ -121,6 +121,6 @@ By DCAU
 ![](/screenshots/dc-3/flag.jpg)
 * Hurray, we are done with this challenge!
 
-# Other walkthroughs visited #
+# References
 1. https://www.hackingarticles.in/dc-3-walkthrough/
 2. https://s1gh.sh/vulnhub-dc-3/

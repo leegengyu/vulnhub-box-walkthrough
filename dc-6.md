@@ -164,6 +164,6 @@ Overall, nothing too challenging given what we had conquered before, except the 
 1. Learnt to re-visit previous knowledge and consolidate them.
 2. Learnt about other ways to escalate privileges with `nmap`.
 
-# Other walkthroughs visited
+# References
 1. https://www.hackingarticles.in/dc6-lab-walkthrough/
 2. https://windsorwebdeveloper.com/dc-6-vulnhub-walkthrough/
