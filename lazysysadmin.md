@@ -54,6 +54,29 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/gobusterResultsWordPress.jpg)
 * Note: `robots.txt` file could not be found.
 * Run `hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.0.2.14 http-form-post '/wordpress/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'` to attempt to get user `admin`'s password. Update: Did not manage to find any password after awhile - do not think that the password can be obtained this way.
+* Continuation: After exploring the SMB service running on port 139, we managed to get the MySQL database credentials `Admin:TogieMYSQL12345^^`, which also allowed us to log into WordPress. It turns out that the password is pretty unique to this challenge, which explains that it was not common enough to be found on a wordlist and thus resulting in our failed `hydra` attempt.
+* From the `Dashboard` we can also confirm that the latest `wpscan` result which detected the WordPress version `4.8.9` as being correct. I am still not sure why my initial `wpscan`s resulted in the wrong version.
+* Looking at the `Users` section, we can confirm that there is only 1 user, and that is `Admin` ourselves.
+* Next, we will be uploading our reverse shell code onto one of the WordPress files. I have chosen to use the `comments.php` file, i.e. Comments file under `Themes`. Looking at the list of files using the Themes Editor, `comments.php` is found near the top of the list.
+* Copy the code from `/usr/share/webshells/php/php-reverse-shell.php`, edit the `$ip` and `$port` to that of our Kali VM IP address and a chosen port just for the reverse shell respectively. Insert the code at the start of the WordPress file (for simplicity).
+![](/screenshots/lazysysadmin/themesReverseShellCode.jpg)
+* After successfully editing the file, make sure that we have our `netcat` listener running on our Kali VM: `nc -v -l -p 1234`.
+* Next, load the web page that would trigger our reverse shell code to execute. In my case, I will simply load the comments page of the `Hello world!` post, i.e. `http://10.0.2.14/wordpress/?p=1#comments`.
+* And we have our shell! Run `python -c 'import pty; pty.spawn("/bin/bash")'` to spawn our interactive TTY shell, and `export TERM=xterm` to enable commands such as `clear` for our convenience. As expected, we are user `www-data`:
+![](/screenshots/lazysysadmin/netcatShell.jpg)
+* Heading to `/home`, we find that there is a user `togie`, but the password `TogieMYSQL12345^^` is incorrect.
+* Next, run `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we can possibly exploit. Turns out that there appears to be nothing of interest though:
+![](/screenshots/lazysysadmin/setuidBinaries.jpg)
+* Failed attempt: The `unix-privesc-check` script is not able to run because `strings` is not installed.
+* I remembered next that we had a password `12345` from `deets.txt` in `share$` sharename. I tried `su togie`, with `12345` being the password. We are now user `togie`:
+![](/screenshots/lazysysadmin/suTogie.jpg)
+* Trying to navigate out of our current directory led us to realise that we are now stuck within a restricted bash shell:
+![](/screenshots/lazysysadmin/rbashRestricted.jpg)
+* To escape `rbash`, run `vi .profile` (or any other file) to open the vi text editor first and then enter `:set shell=/bin/sh`, followed by `:shell`.
+![](/screenshots/lazysysadmin/escapingrBash.jpg)
+* Once we are out, we run `python -c 'import pty; pty.spawn("/bin/bash")'` again to get our interactive TTY shell, and confirm that we are no longer within a `rbash`.
+* Running `cat /etc/issue; uname -a` tells us the OS version of the server, which is `Ubuntu 14.04.5 LTS`:
+![](/screenshots/lazysysadmin/vulnerableOSVersion.jpg)
 * To-be-continued...
 
 # SSH at Port 22
@@ -71,10 +94,19 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/enum4linuxShareEnum.jpg)
 * Accessing `smb://10.0.2.14/` leads us to this. We see `print$` and `share$` which were 2 sharenames in our enumeration earlier. Clicking into `share$` leads us to a login page of sorts:
 ![](/screenshots/lazysysadmin/smbShareLogin.jpg)
-* I attempted to connect as `Anonymous` and the connection was successful! (Note: we are denied entry if we do the same for `print$`)
+* I attempted to connect as `Anonymous` and the connection was successful! (Note: we are denied entry if we attempt to connect similarly for `print$`)
 ![](/screenshots/lazysysadmin/smbShareDirectory.jpg)
-* To-be-continued...
-* `exploit/linux/samba/is_known_pipename` which worked for us previously in `stapler` does not work here because there is **no writable share** here.
+* The first text file that we are looking into is `deets.txt`. Not sure what `CBF` means, but clearly this file was not removed as intended, and the password is not likely to have been updated as well (I am guessing). Anyhow, we will take note of the password `12345`.
+![](/screenshots/lazysysadmin/deetsTextFile.jpg)
+* `index.html` is the page we see when we load `10.0.2.14` on our web browser.
+* `todolist.txt` reminds me of path traversal attack, since it is stating **viewing** to web root using local file browser.
+* Note: This also reminds me of LFI (Local File Inclusion) where the resource is loaded **and executed** in the context of the current application. Glad I got the chance to clarify the two, which appeared the same to me initially.
+![](/screenshots/lazysysadmin/todolistTextFile.jpg)
+* Heading to the `wordpress` directory and opening the `wp-config.php` file, we see the set of MySQL database credentials `Admin:TogieMYSQL12345^^`, as well as the authentication unique keys and salts:
+![](/screenshots/lazysysadmin/wpConfigFile.jpg)
+* Having explored the `share$` sharename, we are reminded that we do not have write permissions (only read) to any of the content within.
+* But that is fine because the set of MySQL database credentials that we just found, also works for the WordPress login (see section on port 80)!
+* Failed attempt: `exploit/linux/samba/is_known_pipename` which worked for us previously in `stapler` does not work here because there is **no writable share** here.
 
 # MySQL at Port 3306
 * This is the error encountered when we try to connect to the MySQL server, which probably explains why we see `MySQL (unauthorized)` when doing our `nmap` scan earlier.
