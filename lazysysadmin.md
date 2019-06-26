@@ -32,6 +32,11 @@ By Togie Mcdogie
 * Attempting a login results in an error, stating that we are unable to log in to the MySQL server because the connection failed. I guess there is no chance for us to do a wordlist attack here for now then.
 ![](/screenshots/lazysysadmin/phpMyAdminPageAttemptedLogin.jpg)
 * Googling about this error leads to proposed solutions of reinstalling phpMyAdmin, probably because of misconfigurations in settings.
+* **Continuation**: After getting the MySQL database credentials `Admin:TogieMYSQL12345^^` below, I realised that this error which I have been seeing does not actually mean that the database is down.
+* Logging into phpMyAdmin as `Admin`, this is what we see:
+![](/screenshots/lazysysadmin/phpMyAdminPageSuccessfulLogin.jpg)
+* However, we are not able to access any tables under `information_schema`, probably because the configurations are incomplete as seen in the warning:
+![](/screenshots/lazysysadmin/phpMyAdminPageCannotViewTable.jpg)
 * Running `gobuster -e -u http://10.0.2.14/phpmyadmin -w /usr/share/wordlists/dirb/common.txt` does not yield much useful information:
 ![](/screenshots/lazysysadmin/gobusterPhpMyAdmin.jpg)
 * `/wordpress` brings us to another site:
@@ -72,12 +77,24 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/suTogie.jpg)
 * Trying to navigate out of our current directory led us to realise that we are now stuck within a restricted bash shell:
 ![](/screenshots/lazysysadmin/rbashRestricted.jpg)
-* To escape `rbash`, run `vi .profile` (or any other file) to open the vi text editor first and then enter `:set shell=/bin/sh`, followed by `:shell`.
+* To escape `rbash`, simply run the command which we have always been using to get our interactive TTY shell: `python -c 'import pty;pty.spawn("/bin/bash")'`. This was something that I had learnt from another walkthrough. However, this would only work if `python` is installed.
+* Alternatively (what I had learnt previously), run `vi .profile` (or any other file) to open the vi text editor first and then enter `:set shell=/bin/sh`, followed by `:shell`. Finally, run `python -c 'import pty; pty.spawn("/bin/bash")'` to get our interactive TTY shell.
 ![](/screenshots/lazysysadmin/escapingrBash.jpg)
-* Once we are out, we run `python -c 'import pty; pty.spawn("/bin/bash")'` again to get our interactive TTY shell, and confirm that we are no longer within a `rbash`.
+* Note: In the event that we lose our current session (either by pressing CTRL + C to attempt to stop something unresponsive or otherwise), we no longer need to use `netcat` to get our shell - simply log on using SSH with `togie:12345`. Nonetheless, we would still need to break out of the `rbash` upon re-establishing the session.
 * Running `cat /etc/issue; uname -a` tells us the OS version of the server, which is `Ubuntu 14.04.5 LTS`:
 ![](/screenshots/lazysysadmin/vulnerableOSVersion.jpg)
-* To-be-continued...
+* At this point, while we are able to find OS exploits relating to this version of Ubuntu, they are coded in the C language and we are not able to execute the binary files that were compiled from them - the error given is `cannot execute binary file: Exec format error`. Moreover, `gcc` is not installed on the vulnerable machine.
+* I was pretty stuck at this point in time, and even resorted to trying to attempt `gcc` with `sudo apt-get install gcc`.
+* I simply did not understand that I had the privileges to go to root at this point in time!
+![](/screenshots/lazysysadmin/sudoUserCommandList.jpg)
+* While I was used to seeing a single entry or two under the section of the commands that our current user can run, this was my first time seeing `(ALL : ALL) ALL`. I was thinking, hmm, I can run all commands as everyone - what did this mean?
+* All I had to do was run `sudo su`, and we are `root`!
+![](/screenshots/lazysysadmin/sudoRootPrivEsc.jpg)
+* There are the couple of usual files in the `/root` directory, but `proof.txt` is probably what we want.
+![](/screenshots/lazysysadmin/rootDirectory.jpg)
+* Opening up `proof.txt`:
+![](/screenshots/lazysysadmin/flag.jpg)
+* And we are done for this challenge!
 
 # SSH at Port 22
 * Learning my lesson from `stapler` where I will now attempt to connect through SSH, I found that there is also a custom banner that greets us, although with not-so-useful information:
@@ -111,6 +128,9 @@ By Togie Mcdogie
 # MySQL at Port 3306
 * This is the error encountered when we try to connect to the MySQL server, which probably explains why we see `MySQL (unauthorized)` when doing our `nmap` scan earlier.
 ![](/screenshots/lazysysadmin/mysqlAttemptedConnect.jpg)
+* Even after being logged in as `togie`, our connection from `10.0.2.14` is prohibited as well. Hmmm.
+![](/screenshots/lazysysadmin/mysqlAttemptedConnectTogie.jpg)
+* We managed to get access to the MySQL database through `phpMyAdmin` (see section on port 80). Hence, accessing port 3306 via an external client is probably disallowed, and it did not matter even if we were connecting from the same network.
 
 # IRC at Port 6667
 * Taking reference from this [article](https://www.hackingtutorials.org/metasploit-tutorials/hacking-unreal-ircd-3-2-8-1/) that I had found, I installed `hexchat` with `apt update && apt install -y hexchat`
