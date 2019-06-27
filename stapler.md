@@ -110,7 +110,7 @@ By g0tmi1k
 ![](/screenshots/stapler/siteWebServerReal.jpg)
 * It seems like there is only the default page available, because trying to load a random, non-existent section of the page resulted in the same page displayed. Same result when trying to load a file like `robots.txt`.
 * The website is built by `Creative Tim`.
-* I decided to try out `gobuster` instead of `dirbuster` considering its many positive reviews that I had found about it, to do a dictionary attack on the URIs (directories and files) on both web servers: `gobuster -e -u http://10.0.2.13:<PortNumber>/ -w /usr/share/wordlists/dirb/common.txt`.
+* I decided to try out `gobuster` instead of `dirbuster` considering its many positive reviews that I had found about it, to do a dictionary attack on the URIs (directories and files) on both web servers: `gobuster -e -u http://10.0.2.18:<PortNumber>/ -w /usr/share/wordlists/dirb/common.txt`.
 ![](/screenshots/stapler/gobusterResults.jpg)
 * Note: `-e` lists the full path of the directory or file that is discovered.
 * It turns out that we can find the `.bashrc` and `.profile` files for the web server running on port 80 - but they do not seem to reveal anything of interest.
@@ -119,15 +119,29 @@ By g0tmi1k
 * According to what I found from Google, a Bad Request is due to our invalid request that the server is unable to process.
 * Not sure if it is due to my knowledge gap or if it is truly something that I had missed, but I do not seem to be able to find anything wrong in the request headers.
 * I had also tried to send only the first 2 lines of the original request, which contains only the GET request and the host address (in case any of the other headers were invalid), but to no avail.
-* It turns out that we need to access the web server on port 12380 with `https`!
+* * **Continuation**: It turns out that running `nikto` would have told us what we needed to know to proceed forward! Run `nikto -h 10.0.2.18:12380`:
+![](/screenshots/stapler/niktoScan12380.jpg)
+* Note: `nikto` is a web server scanner. I knew the existence of such a scanner but I had always thought that I could get away with existing tools that were already doing a great job, based on what I had experienced in the previous challenges. Hence, my lesson here is that our usual tools of `gobuster` and `dirbuster` is not enough. `-h` specifies the host.
+* The part that screams out is actually the first result of the scan - `SSL Info`. We see later on that `The site uses SSL` appears twice. Putting two and two together, this means that we need to access the web server on port 12380 with `https`!
 ![](/screenshots/stapler/siteWebServer12380.jpg)
-* When accessing the site for the first time using https, we need to accept a certificate: (**insert screenshot**)
-* `use auxiliary/scanner/http/apache_optionsbleed` on `msfconsole` (where this version of Apache HTTP server is affected by) did not work here either.
+* Now before we actually see the page above that states `Internal Index Page!`, when accessing the site for the first time using https, we need to accept a certificate (click `Add Exception`):
+![](/screenshots/stapler/certificate12380.jpg)
+* Remember what we saw under the `SSL Info` section of our `nikto` scan? They are actually information found within the certificate.
+* Having arrived at a vanilla page (whose page source is only the one-liner that greets us), we can look back at our `nikto` scan for clues on where we should search next. There are 2 entries, `/admin112233/` and `/blogblog/`. These 2 results are the same ones as what was derived earlier in SSH, except that at that point in time, I could not manage to access these 2 sites because of not knowing about `https`.
+* Let us explore `https://10.0.2.18:12380/admin112233` first:
+![](/screenshots/stapler/admin112233PopUp.jpg)
+* The first thing that we see upon visiting the site is a pop-up that says `This could of been a BeEF-XSS hook ;)`. I recognise the term `XSS`, but not `BeEF`. It turns out that `BeEF` means Browser Exploitation Framework Project, which "is a security tool, allowing a penetration tester or system administrator additional attack vectors when assessing the posture of a target", according to [beefproject](https://beefproject.com/).
+* After that, we are re-directed to `http://www.xss-payloads.com/`.
+* Visiting `https://10.0.2.18:12380/blogblog` brings us to a WordPress blog whose contents are about the office life of Initech:
+![](/screenshots/stapler/blogblogLandingPage.jpg)
+* Note: We recognise that it is a WordPress site based on what we see being stated right at the bottom of the page: `Proudly powered by WordPress`.
+* To-be-continued...
+* Failed attempt: `use auxiliary/scanner/http/apache_optionsbleed` on `msfconsole` (where this version of Apache HTTP server is affected by).
 
 # Doom at Port 666
 * Visiting `http://10.0.2.18:666/` (running service Doom, which I have no idea what it truly is) results in a page displaying unreadable information:
 ![](/screenshots/stapler/portDoom.jpg)
-* `wget http://10.0.2.13:666` allows us to download a local copy of the file, where `file` tells us that it is a .zip file.
+* `wget http://10.0.2.18:666` allows us to download a local copy of the file, where `file` tells us that it is a .zip file.
 ![](/screenshots/stapler/file666.jpg)
 * I found out from `windsorwebdeveloper` that `PK` at the beginning of the file is a sign that it is a zip file.
 * `unzip index.html` gives us `message2.jpg`. Running `file` confirms that it is a JPEG file.
