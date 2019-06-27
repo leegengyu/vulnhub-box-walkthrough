@@ -41,7 +41,7 @@ By g0tmi1k
 * For the next part, it appears that we have to do a dictionary attack to get a set of FTP credentials, and our dictionary wordlist would be derived by enumerating NetBIOS-SSN Samba SMBD at port 139 (see section on this below).
 * We will run `hydra -L formattedwordlist.txt -P formattedwordlist.txt 10.0.2.18 ftp`:
 ![](/screenshots/stapler/ftpHydra.jpg)
-* Note: Not sure how we would know to use the same wordlist as both username and password (because that does not seem like an intuitive thought) - I did recall seeing from the `enum4linux` results that the section started off with this line `Enumerating users using SID S-1-22-1 and logon username '', password ''`. **Did this mean that the username and password would be the same?**
+* Note: Not sure how we would know to use the same wordlist as both username and password, because that does not seem like an intuitive thought - I would have thought that it would be too easy. But nonetheless, I will be trying out the same wordlist for both the username and password wordlist, moving forward.
 * We managed to obtain 1 set of credentials: `SHayslett:SHayslett`.
 * Next, let us login to the FTP server again with our set of credentials:
 ![](/screenshots/stapler/ftpLoginSHayslett.jpg)
@@ -74,8 +74,8 @@ By g0tmi1k
 
 # NetBIOS-SSN Samba SMBD at Port 139
 * This is even newer to me than FTP, with my only knowledge about this being that ports 137 to 139 are used for NetBIOS (Network Basic Input/Output System).
-* We will use `enum4linux` here: `enum4linux 10.0.2.18`. The screenshot below only shows the information that we will be extracting from the scan - a wordlist:
-![](/screenshots/stapler/enum4linuxResults.jpg)
+* We will use `enum4linux` here: `enum4linux 10.0.2.18`. The screenshot below only shows the information that we will be extracting from the scan, i.e. a wordlist:
+![](/screenshots/stapler/enum4linuxPartialResults.jpg)
 * Note: `enum4linux` is a tool for "enumerating data from Windows and Samba hosts".
 * Copy and paste the relevant result lines and paste it into a text file (e.g. `wordlist.txt`).
 * Next, run `cat wordlist.txt | cut -d '\' -f2 | cut -d ' ' -f1 > formattedwordlist.txt` to just extract the dedicated string on each line, i.e. removing all redundant information.
