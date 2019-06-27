@@ -115,6 +115,9 @@ By Togie Mcdogie
 * At this point in time, I am not sure if there are other valuable pieces of information from the scan results (it is quite long) because this is only my second time encountering this.
 * **Continuation**: Turns out that there is - we should have been also looking at the `Share Enumeration` section. Under it, we see that there is the printer drivers and the web server, but `Sumshare` stands out.
 ![](/screenshots/lazysysadmin/enum4linuxShareEnum.jpg)
+* **Alternative**: I was watching one of the walkthroughs from `ippsec` and found out that `smbmap` is his preferred tool over `enum4linux`, where the latter's output can be rather clunky (which I agree). Running `smbmap -H 10.0.2.14` gives us:
+![](/screenshots/lazysysadmin/smbmap.jpg)
+* `-H` stands for the IP address of the host. The output of this command alone is short and concise, and also tells us the permissions of the respective disks, which is very helpful (and would be even more so if there were a lot more disks). Moreover, I do not recall seeing these information in `enum4linux`.
 * Accessing `smb://10.0.2.14/` using the Kali Linux file explorer leads us to `print$` and `share$`, which were 2 sharenames in our enumeration earlier. Clicking into `share$` results in a login page (of sorts):
 ![](/screenshots/lazysysadmin/smbShareLogin.jpg)
 * Note: Trying to access `smb://10.0.2.14/` using a web browser such as Firefox results in a blank screen.
@@ -130,7 +133,6 @@ By Togie Mcdogie
 * Note: This also reminds me of LFI (Local File Inclusion) where the resource is loaded **and executed** in the context of the current application. Glad I got the chance to clarify the two, because they appeared the same to me initially.
 * Heading to the `wordpress` directory and opening the `wp-config.php` file, we see a set of MySQL database credentials `Admin:TogieMYSQL12345^^`:
 ![](/screenshots/lazysysadmin/wpConfigFile.jpg)
-* Having explored the `share$` directory, we are reminded that we do not have `write` permissions (only `read`) to any of the content within.
 * But that is fine because the set of MySQL database credentials that we had just found also serves as a set of WordPress account credentials (see section on port 80)!
 * Failed attempt: `exploit/linux/samba/is_known_pipename` which worked for us previously in `stapler` does not work here because this share is not writeable.
 
