@@ -83,7 +83,7 @@ By g0tmi1k
 * Note: `-d` is the delimiter. `-f` is the field, where the first field is `S-1-22-1-1029` as an example. Each field is separated with a whitespace (my guess after trial-and-error).
 * The wordlist is very small, with only 30 lines:
 ![](/screenshots/stapler/wordlistFromNetBIOS.jpg)
-* We will then use this wordlist to attack for a set of FTP credentials (see above section).
+* We will then use this wordlist to attack for a set of FTP credentials (see section on FTP at port 21).
 * `searchsploit samba` gives us a list of results:
 ![](/screenshots/stapler/searchsploitSamba.jpg)
 * Since the Samba version that we are working with is `4.3.9`, the only one that stood out is `'is_known_pipename()' Arbitrary Module Load`.
@@ -135,6 +135,16 @@ By g0tmi1k
 * Visiting `https://10.0.2.18:12380/blogblog` brings us to a WordPress blog whose contents are about the office life of Initech:
 ![](/screenshots/stapler/blogblogLandingPage.jpg)
 * Note: We recognise that it is a WordPress site based on what we see being stated right at the bottom of the page: `Proudly powered by WordPress`.
+* I headed to the login page at `/wp-login.php`, and ran `hydra -L usernames.txt -P formattedwordlist.txt -S -s 12380 10.0.2.18 http-form-post '/blogblog/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'`:
+* `usernames.txt` consists of:
+1. `harry`: FTP banner
+2. `barry`: SSH banner
+3. `elly`: `note` file in `anonymous` FTP login
+4. `john`: `note` file in `anonymous` FTP login
+* The formatted wordlist text file was taken earlier from the `enum4linux` scan.
+* `-S` allows us to connect via SSL and `-s` allows us to specify our port number, since it is running on a different default port (80).
+* Note: Include a `-V` to see the failed attempts to make sure it is going right (if you would like). The first time I ran the tool, I did it without connecting via SSL and each login attempt took years.
+* Unfortunately, while we could identify 4 valid usernames, we are unable to get a login on any of them with `hydra`.
 * To-be-continued...
 * Failed attempt: `use auxiliary/scanner/http/apache_optionsbleed` on `msfconsole` (where this version of Apache HTTP server is affected by).
 
