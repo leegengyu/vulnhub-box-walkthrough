@@ -119,7 +119,7 @@ By g0tmi1k
 * According to what I found from Google, a Bad Request is due to our invalid request that the server is unable to process.
 * Not sure if it is due to my knowledge gap or if it is truly something that I had missed, but I do not seem to be able to find anything wrong in the request headers.
 * I had also tried to send only the first 2 lines of the original request, which contains only the GET request and the host address (in case any of the other headers were invalid), but to no avail.
-* * **Continuation**: It turns out that running `nikto` would have told us what we needed to know to proceed forward! Run `nikto -h 10.0.2.18:12380`:
+* **Continuation**: It turns out that running `nikto` would have told us what we needed to know to proceed forward! Run `nikto -h 10.0.2.18:12380`:
 ![](/screenshots/stapler/niktoScan12380.jpg)
 * Note: `nikto` is a web server scanner. I knew the existence of such a scanner but I had always thought that I could get away with existing tools that were already doing a great job, based on what I had experienced in the previous challenges. Hence, my lesson here is that our usual tools of `gobuster` and `dirbuster` is not enough. `-h` specifies the host.
 * The part that screams out is actually the first result of the scan - `SSL Info`. We see later on that `The site uses SSL` appears twice. Putting two and two together, this means that we need to access the web server on port 12380 with `https`!
@@ -145,6 +145,31 @@ By g0tmi1k
 * `-S` allows us to connect via SSL and `-s` allows us to specify our port number, since it is running on a different default port (80).
 * Note: Include a `-V` to see the failed attempts to make sure it is going right (if you would like). The first time I ran the tool, I did it without connecting via SSL and each login attempt took years.
 * Unfortunately, while we could identify 4 valid usernames, we are unable to get a login on any of them with `hydra`.
+* Run `wpscan --url https://10.0.2.18:12380/blogblog --enumerate u --disable-tls-checks` to see if we can find out any other valid usernames:
+![](/screenshots/stapler/wpscanUsersResults.jpg)
+* That was a pretty long list - there are a total of 10 usernames that we have now.
+* Note: The `--disable-tls-checks` option is something new - running the command without the option results in the error where it says `SSL peer certificate or SSH remote key was not OK`. Remember we had to manually add an exception by accepting a certificate when we first visited the site? This tool probably encountered the same thing, but did not know how to navigate around it without the additional option.
+* Note2: Looking at the other walkthroughs, it appears that the option was not necessary for them. **Hmm.**
+![](/screenshots/stapler/wpscanUsersResultsError.jpg)
+* **Continuation**: On hindsight, one of these posts actually gave a big hint on the identity of 2 users. If we were to start cracking any account, we should focus on getting that of user `john`, since he "runs the place".
+* We would also focus our efforts on user `vicki`, since she "sorted out WordPress plugins". Note that `vicki` did not show up on our earlier efforts to enumerate users, but I realised that this account exists by manually trying it out via the login page. +1 to the user list.
+* Also, there is also a hint here that we should look into enumerating plugins, and see if there are any vulnerabilities that can get us in.
+![](/screenshots/stapler/wordPressUserIdentityHints.jpg)
+* We retry the same `hydra` command that we had run earlier, but to no avail.
+* Let us next take a look at the other results of `wpscan --url https://10.0.2.18:12380/blogblog --disable-tls-checks`.
+* The first result that got our interest is the presence of `readme.html`. Both the file and the `wpscan` result said that the running WordPress version is `4.2.1`, which has apparently got 64 vulnerabilities.
+![](/screenshots/stapler/wordPressVersion.jpg)
+* The theme used is `bhost`, which I have never seen before. No plugins were detected.
+* I read up that our normal `wpscan` execution may not run (sufficient) checks to detect plugins, and that we had to specifically set an option to enumerate them. Run `wpscan --url https://10.0.2.18:12380/blogblog --enumerate ap --disable-tls-checks`, where `ap` means all plugins.
+* However, I got the same result that **No plugins Found.**. Hmm - this contradicts what the hint given above, as well as with the accounts of other walkthroughs that I read...
+* Nonetheless, another finding from our `wpscan` would lead us to find the plugins through another way, through `directory listing` (since it is enabled):
+![](/screenshots/stapler/wordPressListingEnabled.jpg)
+* Opening the given `https://10.0.2.18:12380/blogblog/wp-content/uploads/`, we navigate one directory up, and notice that there are 3 directories: `plugins`, `themes` and `uploads`.
+* Clicking into `plugins` shows us the 3 plugins:
+![](/screenshots/stapler/wordPressListingPlugins.jpg)
+* Googling for `advanced-video-embed-embed-videos-or-playlists exploit` leads us to [WordPress Plugin Advanced Video 1.0 - Local File Inclusion](https://www.exploit-db.com/exploits/39646) on Exploit DB.
+* Reading the `readme.txt` file shows that the running version is `1.0` - looks like we have found something that could work!
+![](/screenshots/stapler/advancedVideoPluginVersion.jpg)
 * To-be-continued...
 * Failed attempt: `use auxiliary/scanner/http/apache_optionsbleed` on `msfconsole` (where this version of Apache HTTP server is affected by).
 
