@@ -12,4 +12,4 @@ This repository contains a list of CTFs/vulnerable virtual machines which I have
 9. DC: 6 (DCAU)
 10. Stapler: 1 (g0tmi1k)
 11. LazySysAdmin: 1 (Togie Mcdogie)
-12. digitalworld.local: DEVELOPMENT (Donavan)
+12. Basic Pentesting: 2 (Josiah Pierce)
