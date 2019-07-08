@@ -126,6 +126,9 @@ By g0tmi1k
 ![](/screenshots/stapler/siteWebServer12380.jpg)
 * Now before we actually see the page above that states `Internal Index Page!`, when accessing the site for the first time using https, we need to accept a certificate (click `Add Exception`):
 ![](/screenshots/stapler/certificate12380.jpg)
+
+* 
+
 * Remember what we saw under the `SSL Info` section of our `nikto` scan? They are actually information found within the certificate.
 * Having arrived at a vanilla page (whose page source is only the one-liner that greets us), we can look back at our `nikto` scan for clues on where we should search next. There are 2 entries, `/admin112233/` and `/blogblog/`. These 2 results are the same ones as what was derived earlier in SSH, except that at that point in time, I could not manage to access these 2 sites because of not knowing about `https`.
 * Let us explore `https://10.0.2.18:12380/admin112233` first:
@@ -170,7 +173,29 @@ By g0tmi1k
 * Googling for `advanced-video-embed-embed-videos-or-playlists exploit` leads us to [WordPress Plugin Advanced Video 1.0 - Local File Inclusion](https://www.exploit-db.com/exploits/39646) on Exploit DB.
 * Reading the `readme.txt` file shows that the running version is `1.0` - looks like we have found something that could work!
 ![](/screenshots/stapler/advancedVideoPluginVersion.jpg)
-* To-be-continued...
+* Create `39646.py` which contains the exact contents from the Exploit DB page. The only modification which we need is the line where we assign our url string to variable `url` - change it accordingly. Mine is: `url = "https://10.0.2.18:12380/blogblog"`.
+* Next, run it with `python 39646.py`:
+![](/screenshots/stapler/pluginExploitFailed.jpg)
+* The error is related to SSL and its certificate. Whatever we did above had to cater to the HTTPS consideration, and so would this step.
+* Googling about this error leads us to [this StackOverflow post](https://stackoverflow.com/questions/27835619/urllib-and-ssl-certificate-verify-failed-error) which tells us how we can resolve this error.
+* Add `import ssl` then `ssl._create_default_https_context = ssl._create_unverified_context` to `39646.py`, at the end of the 3 import statements. Run `39646.py`, which should display no output.
+* Note: These 2 additional lines are known as `monkey patches` according to the StackOverflow post - interesting to learn that this term refers to ways to extend/modify software for local purposes.
+* **Alternatively**, instead of all of the hassle above, just refer to the line of comment in the code which says `POC`, and modify the URL accordingly before running it in the browser. Mine would be `https://10.0.2.18:12380/blogblog/wp-admin/admin-ajax.php?action=ave_publishPost&title=random&short=1&term=1&thumb=../wp-config.php`. If you see some one-liner input like this, it is done:
+![](/screenshots/stapler/pluginExploitShortMethod.jpg)
+* Fun-fact: I ran the same page several times, and watched the `p=` value increase by 20 each time.
+* Heading to `https://10.0.2.18:12380/blogblog/wp-content/uploads/`, we see that the originally empty directory has got `.jpeg` files inside now.
+* Run `wget https://10.0.2.18:12380/blogblog/wp-content/uploads/1325939172.jpeg --no-check-certificate` to download the image:
+![](/screenshots/stapler/wgetImage.jpg)
+* Note: Again, running without an additional option here `--no-check-certificate` would result in an error because of HTTPS:
+![](/screenshots/stapler/wgetImageError.jpg)
+* Having successfully downloaded the `.jpeg` file, we would expect it to be a text file, so run `cat` to see the contents, and we have now got the MySQL database credentials `root:plbkac`!
+![](/screenshots/stapler/mySQLDatabaseCredentials.jpg)
+* The exploit code stated the file `wp-config.php` as the one that we would like to obtain, which is why we managed to get the database credentials. There are other files that we can get as well, such as `/etc/passwd`.
+* How the exploit worked: I am not entirely sure how this plugin works, since its official WordPress link does not reveal any details - it has already been closed. But I suppose that the idea is that it creates an unauthenticated post, and publishes it, with the `.jpeg` file being attached to the post as well. However, it does not load as an image because it is a text file instead.
+* This is what we see at the main page of the WordPress site - I had executed the exploit code several times:
+![](/screenshots/stapler/wordPressUnauthenticatedPosts.jpg)
+* I felt that the toughest part for me here was figuring out where the `.jpeg` file is stored. I know that things would not be as straightforward as simply running the exploit code because the output was blank. Granted, I knew that the exploit code would publish a post, since I saw `publishPost`. However, going to the post or the homepage did not reveal to us the location of the `.jpeg` file. I suppose that we would have to **link our previous discovery of the uploads directory to this exploit to find the jpeg files**.
+* Let us now head to the section on MySQL since we have got a set of credentials from this plugin exploit.
 * Failed attempt: `use auxiliary/scanner/http/apache_optionsbleed` on `msfconsole` (where this version of Apache HTTP server is affected by).
 
 # Doom at Port 666
@@ -188,8 +213,33 @@ By g0tmi1k
 * Conclusion: Hmm, nonetheless, I suspect this entire port and service was to just throw us off the main path.
 
 # MySQL at Port 3306
-* Running on version `5.7.12-0ubuntu1`, I found an [exploit](https://www.exploit-db.com/exploits/40679) that would work on it, provided that we could get credentials to a system account.
-* This [article](https://robert.penz.name/1416/how-to-brute-force-a-mysql-db/) shows us how we can do a dictionary attack using `hydra`.
+* Research: Running on version `5.7.12-0ubuntu1`, I found an [exploit](https://www.exploit-db.com/exploits/40679) that would work on it, provided that we could get credentials to a system account.
+* Research: This [article](https://robert.penz.name/1416/how-to-brute-force-a-mysql-db/) shows us how we can do a dictionary attack using `hydra`.
+* Having derived a set of credentials `root:plbkac` from exploiting a vulnerable WordPress plugin, we will now login with the command `mysql -h 10.0.2.18 -u root -pplbkac`.
+![](/screenshots/stapler/mySQLLogin.jpg)
+* `show databases;` reveals to us several databases:
+![](/screenshots/stapler/mySQLDatabases.jpg)
+* The `loot` database looks interesting, so run `use loot` and `show tables;` to see what tables there are within the database. However, turns out that the information is probably just Initech company's information.
+![](/screenshots/stapler/mySQLlootDatabase.jpg)
+* The next most interesting database would be `wordpress`. Naturally, we would look into the `wp_users` table with `select * from wp_users;`:
+![](/screenshots/stapler/mySQLUsersTable.jpg)
+* We see a list of 16 users with their password hashes respectively - a number that is higher than what we derived based on `wpscan` and our clues gathering previously.
+* Also, this list of information also strengthens our guess that `john` is an Administrator, given that his account was registered earlier than any of the other accounts.
+* Running `hash-identifier` against one of the hashes shows us that it is a MD5 WordPress hash - interesting. This is the first time that we are encountering a variant of the MD5 hash.
+![](/screenshots/stapler/hashIdentifierMD5WordPress.jpg)
+* Using `hashcat`, we are able to the password of user `john` within about 2.5 minutes: `incorrect`. Run `hashcat -m 400 crackThisHash.txt /usr/share/wordlists/rockyou.txt --force`:
+![](/screenshots/stapler/hashcatJohnPasswordHash.jpg)
+* Note: The same command was used in `dc-3`, with the exception that we are using hash type 400 here, which encompasses `phpass, MD5(Wordpress), MD5(phpBB3), MD5(Joomla)`.
+* **To-consider**: Using `hydra` with `rockyou.txt` to get user `john` credentials.
+* Logging in to the WordPress admin panel with `john:incorrect` shows us a customised version of it (the usual ones that we see are for example, styled in blue):
+![](/screenshots/stapler/wordPressAdminPage.jpg)
+* Next-step: Plugin/Theme reverse-shell code insertion.
+
+# To-Explore
+* Since the certificate's Common Name is `Red.Initech`, we will add one entry in the `/etc/hosts` file - `10.0.2.18 red.initech`. (Note: case insensitive in this case)
+![](/screenshots/stapler/hostsFile.jpg)
+* What scan reveals to us the existence of phpMyAdmin?
+* Instead of logging in to phpMyAdmin to replace hash value, can just use mySQL?
 
 # Concluding Remarks
 Encountering a vulnerable machine with so many services makes things more challenging in my opinion because there appears to be so many attack vectors that we can target.
