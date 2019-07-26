@@ -29,7 +29,7 @@ By Jayanth
 * Going to the `/img` directory, we find a couple of images, and a `hidden_secret` directory:
 ![](/screenshots/pumpkingarden/imgDirectory.jpg)
 * Entering the secret directory, we find `clue.txt` which contains a string `c2NhcmVjcm93IDogNVFuQCR5`. I ran `hash-identifier` against this, but not no hash type was detected.
-* I tried to base-64 decode this, and found that it gave us `scarecrow : 5Qn@$ya`. Seems like it is a set of login credentials. Tried to login back on FTP with them, but to no avail.
+* I tried to base-64 decode this, and found that it gave us `scarecrow : 5Qn@$y`. Seems like it is a set of login credentials. Tried to login back on FTP with them, but to no avail.
 * I opened up the rest of the images and found that they were simply pumpkin images.
 * There is no `robots.txt` or `readme.html` file or `/wp-login.php` page detected.
 * Running a `nikto` scan did not reveal anything additional to us as well:
@@ -39,18 +39,35 @@ By Jayanth
 * Let us move onto the last service - SSH at port 3535.
 
 # SSH at Port 3535
-* Using `scarecrow:5Qn@$ya`, we managed to get in. There is a `note.txt` in scarecrow's home directory - which contains 3 pieces of information: 2 usernames `LordPumpkin` (whom we understand to have root privileges) and `goblin`, as well as a secret passphrase `Y0n$M4sy3D1t`.
+* Using `scarecrow:5Qn@$y`, we managed to get in. There is a `note.txt` in scarecrow's home directory - which contains 3 pieces of information: 2 usernames `LordPumpkin` (whom we understand to have root privileges) and `goblin`, as well as a secret passphrase `Y0n$M4sy3D1t`.
 ![](/screenshots/pumpkingarden/sshLogin.jpg)
-* Trying to login as `goblin` with the passphrase, we find that we got in in no time! We head to goblin's home directory and find a file `note`. Opening it reveals an exploit found at `https://www.securityfocus.com/data/vulnerabilities/exploits/38362.sh` that is intended for us to use (I suppose).
+* Trying to login as `goblin` with the passphrase (hence forming another set of credentials `goblin:Y0n$M4sy3D1t`), we find that we got in in no time! We head to goblin's home directory and find a file `note`. Opening it reveals an exploit found at `https://www.securityfocus.com/data/vulnerabilities/exploits/38362.sh` that is intended for us to use (I suppose).
 ![](/screenshots/pumpkingarden/goblinNote.jpg)
-* Opening up exploit number `38362`'s shell script shows us that the exploit simply took advantage of `sudoedit`, which allows us to edit any file as `root`. I did not bother to run the script after initially trying to do so at `/tmp`, and instead finding the file being deleted almost instantaneously - no idea why. Moreover, we could simply make use of the exploit ourselves and edit whichever files that would suit our need to be `root`.
+* Opening up exploit number `38362`'s shell script shows us that the exploit simply took advantage of `sudoedit`, which allows us to edit any file as `root`. I did not bother to run the script after initially trying to do so at `/tmp`, and instead finding the file being deleted almost instantaneously - no idea why. Moreover, we could simply make use of `sudoedit` ourselves and edit whichever files that would suit our need to be `root`.
+* See **Post-Mortem** section on other methods to escalate our privileges (as should have been the intended way).
 * Referring back to `dc-4`, we had 2 methods of escalating our privileges - the first of which was to add `fakeroot` to `/etc/passwd`. However, I am not sure why that did not work out for me - after adding `fakeroot::0:0:::/bin/bash` to the file, `su fakeroot` still prompted for a password.
-* Hence, I used the second method where I added `* * * * * root chmod 4777 /bin/sh` to `/etc/crontab`. I checked `/bin/sh`'s permissions not too long later, and after finding that it has been given `777` permissions, I ran `/bin/sh` and volia, we are `root`!
+* Hence, I used the second method where I added `* * * * * root chmod 4777 /bin/sh` to `/etc/crontab`. I checked `/bin/sh`'s permissions not too long later, and after finding that it has been given `777` permissions, I ran `/bin/sh` and volia, we are now (effectively) `root`!
 ![](/screenshots/pumpkingarden/privEsc.jpg)
 * Heading to `/root` directory, we find `PumpkinGarden_Key`, and opening it we find a key - indicating that we have solved the challenge!
 ![](/screenshots/pumpkingarden/root.jpg)
+
+# Post-Mortem - Other Methods of Privilege Escalation
+* According to another walkthrough that I read, running `ps -aux` reveals to us that every 15/30 seconds, contents of the `/tmp` and goblin's `/home` directory would be removed totally, which explains why our files started disappearing really soon.
+![](/screenshots/pumpkingarden/autoRemove.jpg)
+* To circumvent this and use the exploit provided, we have to switch user to be `scarecrow`, then put the exploit into this user's home directory (we cannot use this user's `/tmp` directory as it would clear out too).
+* Finally, create a dummy file for this exploit to edit (though I do not think this is necessary as we can simply choose any file - for example, `note.txt` in scarecrow's home directory). Give both files permissions `777`, and also the same set of permissions to the `scarecrow` directory (so goblin can access scarecrow's directory), before logging back in as `goblin`.
+* Note: Trying to run it as user `scarecrow` results in this error message: scarecrow is not in the sudoers file.  This incident will be reported.
+* Fun fact: While switching users, I found out that the user `jack` existed as well - we had earlier seen him being mentioned in our first finding from FTP. I suspect that this could be another 'entry point' as well.
+* We head into `goblin`'s home directory, before running `./38362.sh note.txt`, allowing ourselves to now be `root`:
+![](/screenshots/pumpkingarden/privEsc2.jpg)
 
 # Concluding Remarks
 This challenge was a relatively smooth-sailing one - I did not refer to any walkthroughs to get `root`, but I did get stuck for a few moments at the very last stage. By stuck, I was questioning myself why some things were not working as expected - such as the shell script being emptied virtually the very moment it was downloaded/created, and adding our own accounts to `/etc/passwd` still prompted a password.
 
 Overall, this was a great exercise in dusting off some rust - I was away for a couple of weeks to focus on other matters and will be back for just as long as I can before school starts.
+
+1. Learnt about `sudoedit`.
+2. Re-visited `ps -aux` - I should have looked into the processes that were running to see what was causing our files in `/tmp` directory to be wiped out so quickly.
+
+# Reference Links
+1. https://medium.com/@geochris35/ethical-hacking-for-beginners-pumpkin-garden-vulnhub-walkthrough-54faebc55945
