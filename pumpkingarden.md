@@ -39,4 +39,8 @@ By Jayanth
 * Let us move onto the last service - SSH at port 3535.
 
 # SSH at Port 3535
-* I tried `scarecrow:5Qn@$ya` here, but it did not work out.
+* Using `scarecrow:5Qn@$ya`, we managed to get in. There is a `note.txt` in scarecrow's home directory - which contains 3 pieces of information: 2 usernames `LordPumpkin` (whom we understand to have root privileges) and `goblin`, as well as a secret passphrase `Y0n$M4sy3D1t`.
+![](/screenshots/pumpkingarden/sshLogin.jpg)
+* Trying to login as `goblin` with the passphrase, we find that we got in in no time! We head to goblin's home directory and find a file `note`. Opening it reveals an exploit found at `https://www.securityfocus.com/data/vulnerabilities/exploits/38362.sh` that is intended for us to use (I suppose).
+![](/screenshots/pumpkingarden/goblinNote.jpg)
+* 
