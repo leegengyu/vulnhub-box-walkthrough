@@ -43,4 +43,14 @@ By Jayanth
 ![](/screenshots/pumpkingarden/sshLogin.jpg)
 * Trying to login as `goblin` with the passphrase, we find that we got in in no time! We head to goblin's home directory and find a file `note`. Opening it reveals an exploit found at `https://www.securityfocus.com/data/vulnerabilities/exploits/38362.sh` that is intended for us to use (I suppose).
 ![](/screenshots/pumpkingarden/goblinNote.jpg)
-* 
+* Opening up exploit number `38362`'s shell script shows us that the exploit simply took advantage of `sudoedit`, which allows us to edit any file as `root`. I did not bother to run the script after initially trying to do so at `/tmp`, and instead finding the file being deleted almost instantaneously - no idea why. Moreover, we could simply make use of the exploit ourselves and edit whichever files that would suit our need to be `root`.
+* Referring back to `dc-4`, we had 2 methods of escalating our privileges - the first of which was to add `fakeroot` to `/etc/passwd`. However, I am not sure why that did not work out for me - after adding `fakeroot::0:0:::/bin/bash` to the file, `su fakeroot` still prompted for a password.
+* Hence, I used the second method where I added `* * * * * root chmod 4777 /bin/sh` to `/etc/crontab`. I checked `/bin/sh`'s permissions not too long later, and after finding that it has been given `777` permissions, I ran `/bin/sh` and volia, we are `root`!
+![](/screenshots/pumpkingarden/privEsc.jpg)
+* Heading to `/root` directory, we find `PumpkinGarden_Key`, and opening it we find a key - indicating that we have solved the challenge!
+![](/screenshots/pumpkingarden/root.jpg)
+
+# Concluding Remarks
+This challenge was a relatively smooth-sailing one - I did not refer to any walkthroughs to get `root`, but I did get stuck for a few moments at the very last stage. By stuck, I was questioning myself why some things were not working as expected - such as the shell script being emptied virtually the very moment it was downloaded/created, and adding our own accounts to `/etc/passwd` still prompted a password.
+
+Overall, this was a great exercise in dusting off some rust - I was away for a couple of weeks to focus on other matters and will be back for just as long as I can before school starts.
