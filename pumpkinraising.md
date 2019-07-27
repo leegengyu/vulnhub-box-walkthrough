@@ -22,7 +22,7 @@ By Jayanth
 * I tried to access the `/images` directory as was done in the previous challenge, but here no permissions were given to us.
 * Opening up the Page Source shows us an interesting string in the comments: `VGhpcyBpcyBqdXN0IHRvIHJlbWFpbmQgeW91IHRoYXQgaXQncyBMZXZlbCAyIG9mIE1pc3Npb24tUHVtcGtpbiEgOyk=`.
 ![](/screenshots/pumpkinraising/siteLandingPageSource.jpg)
-* Attempting to base-64 decode it, we get the message: This is just to remaind you that it's Level 2 of Mission-Pumpkin! ;). Moving on...
+* Attempting to base-64 decode it, we get the message: `This is just to remaind you that it's Level 2 of Mission-Pumpkin! ;)`. Moving on...
 * Opening up `robots.txt`, we see a whole page of information - even the comments at the top were left intact:
 ![](/screenshots/pumpkinraising/robotsTxt.jpg)
 * The first file that caught my attention is `/hidden/note.txt`. Opening it up shows us what appears to be 3 sets of credentials:
@@ -33,7 +33,7 @@ By Jayanth
 * I thought robert and mark's passwords are base64-encoded, but they could not be decoded so I guess that is their dirct password.
 * I tried to use these 3 sets of credentials to log in via SSH but they did not work out.
 * I visited `underconstruction.html` next, but it just showed us a pumpkin image with "+++ PAGE UNDER CONSTRUCTION +++". Nothing in the page source of note, except this title of the image: Looking for seeds? I ate them all!.
-* Opening `/seeds/seed.txt.gpg`, we see a bunch of garbled text, which is probably a set of keys, I think. Looking back at the challenge's description, we are required to find 4 pumpkin seeds - this should be the first one. I tried to find `/seeds/seed2.txt.gpg` and so on, but that did not work out.
+* Opening `/seeds/seed.txt.gpg`, we see a bunch of garbled text, which is probably a set of keys, I think. Not sure how this file can be used. I tried to find `/seeds/seed2.txt.gpg` and so on, but that did not work out.
 ![](/screenshots/pumpkinraising/gpgFile.jpg)
 * After trying to access several other directories and files from `robots.txt`, I found out that the list is probably not the most updated - some of them were Not Found.
 * Running a `nikto` scan did not turn up information that we did not already know, though it did rightfullly highlight the 3 files which were the most useful findings:
@@ -44,6 +44,6 @@ By Jayanth
 ![](/screenshots/pumpkinraising/pumpkinHTMLSource1.jpg)
 * At the end of the Page Source, we see another chunk of comments - what appears to be in hexadecimal.
 ![](/screenshots/pumpkinraising/pumpkinHTMLSource2.jpg)
-* Using an online hexadecimal to ASCII converter, we see this message - which contains an ID `96454`:
+* Using an online hexadecimal to ASCII converter, we see this message - which contains our first seed ID `96454`:
 ![](/screenshots/pumpkinraising/pumpkinHTMLHexToASCII.jpg)
 * To-be-continued...
