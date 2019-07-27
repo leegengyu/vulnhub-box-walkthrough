@@ -67,6 +67,10 @@ By Jayanth
 * When I reached out to view a walkthrough on this part, I tried to use the online decoder that I had used during PicoCTF previously, but to no avail. It returned the same result as I would see when using `strings`. At a loss, I read on further about Steghide and StegoSuite, which were tools in Kali for steganography.
 * Steghide did not work out, and turns out that we had to use StegoSuite. Moreover, it was `mark`'s password which was required to extract the information finally. Opening `decorative.txt`, we find the next seed ID: `86568`.
 ![](/screenshots/pumpkinraising/stegoSuiteSuccess.jpg)
+* For the last seed ID, I knew that it had to do with `seed.txt.gpg`, because that was the only clue that we had not cracked. However, I had tried all means to get the password, but to no avail. I reached out for my third lifeline - the password is `SEEDWATERSUNLIGHT`. Hmmmm - I would never have figured that out...
+![](/screenshots/pumpkinraising/gpgFileCracked.jpg)
+* The image that we see is actually morse code - we see `morse` being mentioned earlier as one of the seeds sellers. I tried the first two online decoders, which did not give very correct results. Though I could have pieced two and two together to get the last seed ID `69507`, I went to the walkthrough and found that the person used CyberChef, which gave the cleanest and most complete version (the one pictured at the bottom).
+![](/screenshots/pumpkinraising/morseCodeDecode.jpg)
 * To-be-continued...
 
 # Concluding Remarks
@@ -75,3 +79,6 @@ I had thought that the second part of the challenge series would be manageable f
 1. Learnt that there were other base type encodings as well, specifically the base32 encoding in this challenge. After I found out that it was base32-encoded, I asked myself - how would one know? Moreover, I had always been experiencing only base64-encoded content so far. I found 2 stackexchange questions - [here](https://security.stackexchange.com/questions/186815/identify-encoding-type-decoding-base-32-64) and [here](https://security.stackexchange.com/questions/3989/how-to-determine-what-type-of-encoding-encryption-has-been-used) that were useful. To sum it up, use experience to make educated guesses, and also some signs such as `==` to tell that it was base64-encoded, etc.
 2. Learnt to really think better about the challenge's hints that were dropped - `secretly spy online conversations`, `Looking for seeds? I ate them all!`, etc.
 3. Learnt about steganography tools in Kali, specifically Steghide and StegoSuite
+
+# Reference Links
+1. https://www.hackingarticles.in/pumpkinraising-vulnhub-walkthrough/
