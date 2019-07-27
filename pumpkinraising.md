@@ -71,14 +71,31 @@ By Jayanth
 ![](/screenshots/pumpkinraising/gpgFileCracked.jpg)
 * The image that we see is actually morse code - we see `morse` being mentioned earlier as one of the seeds sellers. I tried the first two online decoders, which did not give very correct results. Though I could have pieced two and two together to get the last seed ID `69507`, I went to the walkthrough and found that the person used CyberChef, which gave the cleanest and most complete version (the one pictured at the bottom).
 ![](/screenshots/pumpkinraising/morseCodeDecode.jpg)
-* To-be-continued...
+* Okay, we have got all 4 seeds. Now what? The only information that we have yet to fully utilise is 2 out of 3 of the credentials, and the fact that we have SSH.
+* So there were several obstacles here. After identifying that the user `jack` is the most probable one (since it was mentioned that he is the only expert in raising healthy pumpkins), I thought that the password format would be in the form of `goblin`'s password, with the dashes. It turns out that the actual password did not have any dash, and was just a string of the seed IDs that we had found. There would have been 4! == 24 permutations, and only one is correct.
+* The credential that would get us in is `jack:69507506099645486568`:
+![](/screenshots/pumpkinraising/sshLogin.jpg)
+* Turns out that we are stuck in a `rbash` even though we are in. To get out of it, run `python -c 'import pty;pty.spawn("/bin/bash")'`.
+* Navigating to one level above jack's home directory, we see that only his exists. `/etc/passwd` also concurs that he is the only user besides `root` that we would look at.
+* We cannot navigate to `/root`, and running `sudo su` with jack's password tells us that `Sorry, user jack is not allowed to execute '/bin/su' as root on Pumpkin.`.
+* Running `sudo -l` tells us that jack can run `/usr/bin/strace` as `root`.
+* From here, it was easy for me to get the flag. Simply run `sudo strace /bin/sh` to spawn a shell as `root`, then navigate to `/root` and open up `flag.txt`. Hurray, we are done!
+* Note: Using `/bin/bash` instead is possible I suppose, but it was pretty annoying not to be able to see my command in one line as I type when the read system call was waiting for the user input. I saw whatever I type fly upwards in the terminal with bin-bash.
+![](/screenshots/pumpkinraising/flag.jpg)
 
 # Concluding Remarks
-I had thought that the second part of the challenge series would be manageable for me, i.e. without having to refer to any walkthroughs at all - but I did eventually, because I had exhausted attempts with what I had already known. This also brought me back to my intent of my continued practice to work on beginner-level CTFs, as I believe that there would still be gaps that I had to fill, and things to learn.
+I had thought that the second part of the challenge series would be manageable for me, i.e. without having to refer to any walkthroughs at all - but I did eventually, and had to do so more than once because I had exhausted attempts with what I had already known. This also brought me back to my intent of my continued practice to work on beginner-level CTFs, as I believe that there would still be gaps that I had to fill, and things to learn.
+
+I felt that out of the several occasions where I got stuck, one or two were owing to my ownself where I did not push hard enough to piece together the clues. Firstly, the part about the base32-decoding. I did not know that it existed beforehand, but perhaps searching a little longer about other encoding styles might have revealed it. Secondly, the part about steganography. I stopped at Steghide and did not push forward with the other tool, thinking that the 3 credentials found could not have been used here (I had thought they were user credentials).
+
+The part about the password being `SEEDWATERSUNLIGHT`, and `jack`'s password being the multiple seed IDs pieced together - those were truly unique and interesting situations. For the former, it would be very unlikely that I would have guessed it, I suppose. But for the latter, hitting a few more hours would have probably gotten me the password.
 
 1. Learnt that there were other base type encodings as well, specifically the base32 encoding in this challenge. After I found out that it was base32-encoded, I asked myself - how would one know? Moreover, I had always been experiencing only base64-encoded content so far. I found 2 stackexchange questions - [here](https://security.stackexchange.com/questions/186815/identify-encoding-type-decoding-base-32-64) and [here](https://security.stackexchange.com/questions/3989/how-to-determine-what-type-of-encoding-encryption-has-been-used) that were useful. To sum it up, use experience to make educated guesses, and also some signs such as `==` to tell that it was base64-encoded, etc.
 2. Learnt to really think better about the challenge's hints that were dropped - `secretly spy online conversations`, `Looking for seeds? I ate them all!`, etc.
 3. Learnt about steganography tools in Kali, specifically Steghide and StegoSuite
+4. Learnt about privilege escalation with `strace`. I knew how this tool worked since my school work required me to go through system calls with it, but using it for the first time to escalate ourselves was interesting.
+
+All in all, this was definitely a good one for me!
 
 # Reference Links
 1. https://www.hackingarticles.in/pumpkinraising-vulnhub-walkthrough/
