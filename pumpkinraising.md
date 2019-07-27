@@ -32,8 +32,18 @@ By Jayanth
 ![](/screenshots/pumpkinraising/hiddenNote.jpg)
 * I thought robert and mark's passwords are base64-encoded, but they could not be decoded so I guess that is their dirct password.
 * I tried to use these 3 sets of credentials to log in via SSH but they did not work out.
-* I visited `underconstruction.html` next, but it just showed us a pumpkin image with "+++ PAGE UNDER CONSTRUCTION +++". Nothing in the page source of note.
-* Opening `/seeds/seed.txt.gpg`, we see a bunch of garbled text, which is probably a set of keys, I think.
+* I visited `underconstruction.html` next, but it just showed us a pumpkin image with "+++ PAGE UNDER CONSTRUCTION +++". Nothing in the page source of note, except this title of the image: Looking for seeds? I ate them all!.
+* Opening `/seeds/seed.txt.gpg`, we see a bunch of garbled text, which is probably a set of keys, I think. Looking back at the challenge's description, we are required to find 4 pumpkin seeds - this should be the first one. I tried to find `/seeds/seed2.txt.gpg` and so on, but that did not work out.
 ![](/screenshots/pumpkinraising/gpgFile.jpg)
 * After trying to access several other directories and files from `robots.txt`, I found out that the list is probably not the most updated - some of them were Not Found.
+* Running a `nikto` scan did not turn up information that we did not already know, though it did rightfullly highlight the 3 files which were the most useful findings:
+![](/screenshots/pumpkinraising/niktoScan.jpg)
+* At this point I was a little stuck, so I revisited the landing page and found that we missed out `pumpkin.html`, which was found by clicking on Pumpkin Seeds or by going again into the Page Source:
+![](/screenshots/pumpkinraising/pumpkinHTML.jpg)
+* Opening up the Page Source, we see another string in the comments: `F5ZWG4TJOB2HGL3TOB4S44DDMFYA====`. Not sure what it is, since I could not base64-decode it, nor could `hash-identifier`.
+![](/screenshots/pumpkinraising/pumpkinHTMLSource1.jpg)
+* At the end of the Page Source, we see another chunk of comments - what appears to be in hexadecimal.
+![](/screenshots/pumpkinraising/pumpkinHTMLSource2.jpg)
+* Using an online hexadecimal to ASCII converter, we see this message - which contains an ID `96454`:
+![](/screenshots/pumpkinraising/pumpkinHTMLHexToASCII.jpg)
 * To-be-continued...
