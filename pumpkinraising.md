@@ -38,8 +38,9 @@ By Jayanth
 ![](/screenshots/pumpkinraising/constructionPageSource.jpg)
 * When I went to `/images/jackolantern.gif`, I found that it was just a static image, as compared to the moving `/images/uc.gif`. Hmm. Maybe there would be something more to `jackolantern.gif`, so I downloaded it and ran `strings` against it, but nothing noteworthy came out of it, though I did see `GIF89a` at the very beginning which reminded me of an earlier challenge that we did.
 * Running `strings` against `uc.gif` did not result in anything substantial either.
-* Opening `/seeds/seed.txt.gpg`, we see a bunch of garbled text, which is probably a set of keys, I think. Not sure how this file can be used. I downloaded it and renamed it to `jpg` and `gif`, but it did not work out. I tried to find `/seeds/seed2.txt.gpg` and so on, but that did not work out either.
+* Opening `/seeds/seed.txt.gpg`, we see a bunch of garbled text, where I am not sure how this file can be used. I downloaded it and renamed it to `jpg` and `gif`, but it did not work out. I tried to find `/seeds/seed2.txt.gpg` and so on, but that did not work out either.
 ![](/screenshots/pumpkinraising/gpgFile.jpg)
+* **Continuation**: After being stuck below, I came back to work on this, and searched about the file extension `.txt.gpg`. Turns out that this means that the original text key had been encrypted with a key using GPG. Running `gpg --decrypt seed.txt.gpg` prompts us for a key, and it also tells us that it contains AES256-encrypted data. I attempted with the 3 sets of login credentials found earlier, but to no avail.
 * After trying to access several other directories and files from `robots.txt`, some of them were `Not Found` - perhaps it is not the most updated list.
 * Running a `nikto` scan did not turn up information that we did not already know, though it did rightfullly highlight the 3 files which were the most useful findings:
 ![](/screenshots/pumpkinraising/niktoScan.jpg)
@@ -62,10 +63,15 @@ By Jayanth
 ![](/screenshots/pumpkinraising/wiresharkTCPStream1.jpg)
 * And that was it - only 2 TCP streams within those packets captured.
 * Thinking back, it was mentioned that jack was unaware that people can secretly spy online conversations - turns out that it was referring to the Wireshark capture packets that we saw!
+* At this point, I got stuck again, and reached out for another lifeline - turns out that there was an encoded message within the `jackolantern.gif`! I had never experienced steganography being used in our Vulnhub challenges so far, and only got it once when I was playing on PicoCTF. On hindsight, the hint was quite apt - that the pumpkin had eaten the seeds meant that information about the seeds would be within the image (i.e. steganography)! Oh my.
+* When I reached out to view a walkthrough on this part, I tried to use the online decoder that I had used during PicoCTF previously, but to no avail. It returned the same result as I would see when using `strings`. At a loss, I read on further about Steghide and StegoSuite, which were tools in Kali for steganography.
+* Steghide did not work out, and turns out that we had to use StegoSuite. Moreover, it was `mark`'s password which was required to extract the information finally. Opening `decorative.txt`, we find the next seed ID: `86568`.
+![](/screenshots/pumpkinraising/stegoSuiteSuccess.jpg)
 * To-be-continued...
 
 # Concluding Remarks
 I had thought that the second part of the challenge series would be manageable for me, i.e. without having to refer to any walkthroughs at all - but I did eventually, because I had exhausted attempts with what I had already known. This also brought me back to my intent of my continued practice to work on beginner-level CTFs, as I believe that there would still be gaps that I had to fill, and things to learn.
 
 1. Learnt that there were other base type encodings as well, specifically the base32 encoding in this challenge. After I found out that it was base32-encoded, I asked myself - how would one know? Moreover, I had always been experiencing only base64-encoded content so far. I found 2 stackexchange questions - [here](https://security.stackexchange.com/questions/186815/identify-encoding-type-decoding-base-32-64) and [here](https://security.stackexchange.com/questions/3989/how-to-determine-what-type-of-encoding-encryption-has-been-used) that were useful. To sum it up, use experience to make educated guesses, and also some signs such as `==` to tell that it was base64-encoded, etc.
-2. To-be-added
+2. Learnt to really think better about the challenge's hints that were dropped - `secretly spy online conversations`, `Looking for seeds? I ate them all!`, etc.
+3. Learnt about steganography tools in Kali, specifically Steghide and StegoSuite
