@@ -30,13 +30,15 @@ By Jayanth
 2. Mark : Qn@F5zMg4T
 3. goblin : 79675-06172-65206-17765
 ![](/screenshots/pumpkinraising/hiddenNote.jpg)
-* I thought robert and mark's passwords are base64-encoded, but they could not be decoded so I guess that is their dirct password.
-* I tried to use these 3 sets of credentials to log in via SSH but they did not work out.
-* I visited `underconstruction.html` next, but it just showed us a pumpkin image with "+++ PAGE UNDER CONSTRUCTION +++":
+* I thought robert and mark's passwords are base64-encoded, but they could not be decoded (I followed up and tried to base32-decode it after finding out that something after that was base32-encoded, but this did not work out either). I tried to use these 3 sets of credentials to log in via SSH but they did not work out. Not sure what these mean at this point in time.
+* I visited `underconstruction.html` next, and I had just thought that there was nothing more to the page, but a pumpkin image with `+++ PAGE UNDER CONSTRUCTION +++`.
+* However, it turns out that hovering our mouse over the image gave us the message `Looking for seeds? I ate them all!`, and selecting all elements told us a hidden message at the bottom of the page `jackolantern dot GraphicsInterchangeFormat is under images`:
 ![](/screenshots/pumpkinraising/constructionPage.jpg)
-* Nothing in the page source of note as well, except this title of the image: Looking for seeds? I ate them all!:
+* I did not realise that there was more to the page until I examined the Page Source:
 ![](/screenshots/pumpkinraising/constructionPageSource.jpg)
-* Opening `/seeds/seed.txt.gpg`, we see a bunch of garbled text, which is probably a set of keys, I think. Not sure how this file can be used. I tried to find `/seeds/seed2.txt.gpg` and so on, but that did not work out.
+* When I went to `/images/jackolantern.gif`, I found that it was just a static image, as compared to the moving `/images/uc.gif`. Hmm. Maybe there would be something more to `jackolantern.gif`, so I downloaded it and ran `strings` against it, but nothing noteworthy came out of it, though I did see `GIF89a` at the very beginning which reminded me of an earlier challenge that we did.
+* Running `strings` against `uc.gif` did not result in anything substantial either.
+* Opening `/seeds/seed.txt.gpg`, we see a bunch of garbled text, which is probably a set of keys, I think. Not sure how this file can be used. I downloaded it and renamed it to `jpg` and `gif`, but it did not work out. I tried to find `/seeds/seed2.txt.gpg` and so on, but that did not work out either.
 ![](/screenshots/pumpkinraising/gpgFile.jpg)
 * After trying to access several other directories and files from `robots.txt`, some of them were `Not Found` - perhaps it is not the most updated list.
 * Running a `nikto` scan did not turn up information that we did not already know, though it did rightfullly highlight the 3 files which were the most useful findings:
@@ -59,6 +61,7 @@ By Jayanth
 * Moving onto the next TCP stream, we see that there is another set of dialogue that took place. I suppose that if Robert still had `Jack-Be-Little` pumpkin seeds in stock, we would have got the seed ID for it as well:
 ![](/screenshots/pumpkinraising/wiresharkTCPStream1.jpg)
 * And that was it - only 2 TCP streams within those packets captured.
+* Thinking back, it was mentioned that jack was unaware that people can secretly spy online conversations - turns out that it was referring to the Wireshark capture packets that we saw!
 * To-be-continued...
 
 # Concluding Remarks
