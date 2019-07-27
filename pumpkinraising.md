@@ -32,18 +32,37 @@ By Jayanth
 ![](/screenshots/pumpkinraising/hiddenNote.jpg)
 * I thought robert and mark's passwords are base64-encoded, but they could not be decoded so I guess that is their dirct password.
 * I tried to use these 3 sets of credentials to log in via SSH but they did not work out.
-* I visited `underconstruction.html` next, but it just showed us a pumpkin image with "+++ PAGE UNDER CONSTRUCTION +++". Nothing in the page source of note, except this title of the image: Looking for seeds? I ate them all!.
+* I visited `underconstruction.html` next, but it just showed us a pumpkin image with "+++ PAGE UNDER CONSTRUCTION +++":
+![](/screenshots/pumpkinraising/constructionPage.jpg)
+* Nothing in the page source of note as well, except this title of the image: Looking for seeds? I ate them all!:
+![](/screenshots/pumpkinraising/constructionPageSource.jpg)
 * Opening `/seeds/seed.txt.gpg`, we see a bunch of garbled text, which is probably a set of keys, I think. Not sure how this file can be used. I tried to find `/seeds/seed2.txt.gpg` and so on, but that did not work out.
 ![](/screenshots/pumpkinraising/gpgFile.jpg)
-* After trying to access several other directories and files from `robots.txt`, I found out that the list is probably not the most updated - some of them were Not Found.
+* After trying to access several other directories and files from `robots.txt`, some of them were `Not Found` - perhaps it is not the most updated list.
 * Running a `nikto` scan did not turn up information that we did not already know, though it did rightfullly highlight the 3 files which were the most useful findings:
 ![](/screenshots/pumpkinraising/niktoScan.jpg)
+* `gobuster` did not turn up anything else of note either:
+![](/screenshots/pumpkinraising/gobusterScan.jpg)
 * At this point I was a little stuck, so I revisited the landing page and found that we missed out `pumpkin.html`, which was found by clicking on Pumpkin Seeds or by going again into the Page Source:
 ![](/screenshots/pumpkinraising/pumpkinHTML.jpg)
 * Opening up the Page Source, we see another string in the comments: `F5ZWG4TJOB2HGL3TOB4S44DDMFYA====`. Not sure what it is, since I could not base64-decode it, nor could `hash-identifier`.
 ![](/screenshots/pumpkinraising/pumpkinHTMLSource1.jpg)
 * At the end of the Page Source, we see another chunk of comments - what appears to be in hexadecimal.
 ![](/screenshots/pumpkinraising/pumpkinHTMLSource2.jpg)
-* Using an online hexadecimal to ASCII converter, we see this message - which contains our first seed ID `96454`:
+* Using an online hexadecimal to ASCII converter, we see this message containing our first seed ID `96454`:
 ![](/screenshots/pumpkinraising/pumpkinHTMLHexToASCII.jpg)
+* At this point, I was pretty much stuck, so I reached out for a lifeline and found that the earlier string which we could not decode (`F5ZWG4TJOB2HGL3TOB4S44DDMFYA====`) - was a **base32-encoded string**. Decoding it (online) shows us that it actually is `/scripts/spy.pcap`.
+![](/screenshots/pumpkinraising/base32Decode.jpg)
+* Downloading `spy.pcap`, we find that there are 42 packets within, all of which belong to the TCP protocol.
+* The first 3 packets belong to the TCP handshake, and from the 4th packet onwards, we start seeing recognisable ASCII characters (i.e. messages) from the packets captured. Following that TCP stream, we see that we have the second seed ID `50609` (although we do not know which category of pumpkin seeds that belongs to):
+![](/screenshots/pumpkinraising/wiresharkSeedId.jpg)
+* Moving onto the next TCP stream, we see that there is another set of dialogue that took place. I suppose that if Robert still had `Jack-Be-Little` pumpkin seeds in stock, we would have got the seed ID for it as well:
+![](/screenshots/pumpkinraising/wiresharkTCPStream1.jpg)
+* And that was it - only 2 TCP streams within those packets captured.
 * To-be-continued...
+
+# Concluding Remarks
+I had thought that the second part of the challenge series would be manageable for me, i.e. without having to refer to any walkthroughs at all - but I did eventually, because I had exhausted attempts with what I had already known. This also brought me back to my intent of my continued practice to work on beginner-level CTFs, as I believe that there would still be gaps that I had to fill, and things to learn.
+
+1. Learnt that there were other base type encodings as well, specifically the base32 encoding in this challenge. After I found out that it was base32-encoded, I asked myself - how would one know? Moreover, I had always been experiencing only base64-encoded content so far. I found 2 stackexchange questions - [here](https://security.stackexchange.com/questions/186815/identify-encoding-type-decoding-base-32-64) and [here](https://security.stackexchange.com/questions/3989/how-to-determine-what-type-of-encoding-encryption-has-been-used) that were useful. To sum it up, use experience to make educated guesses, and also some signs such as `==` to tell that it was base64-encoded, etc.
+2. To-be-added
