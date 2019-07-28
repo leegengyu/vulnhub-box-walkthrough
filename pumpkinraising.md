@@ -67,12 +67,14 @@ By Jayanth
 * When I reached out to view a walkthrough on this part, I tried to use the online decoder that I had used during PicoCTF previously, but to no avail. It returned the same result as I would see when using `strings`. At a loss, I read on further about Steghide and StegoSuite, which were tools in Kali for steganography.
 * Steghide did not work out, and turns out that we had to use StegoSuite. Moreover, it was `mark`'s password which was required to extract the information finally. Opening `decorative.txt`, we find the next seed ID: `86568`.
 ![](/screenshots/pumpkinraising/stegoSuiteSuccess.jpg)
-* For the last seed ID, I knew that it had to do with `seed.txt.gpg`, because that was the only clue that we had not cracked. However, I had tried all means to get the password, but to no avail. I reached out for my third lifeline - the password is `SEEDWATERSUNLIGHT`. Hmmmm - I would never have figured that out...
+* For the last seed ID, I knew that it had to do with `seed.txt.gpg`, because that was the only clue that we had not cracked. However, I had tried all means to get the password, but to no avail. I reached out for my third lifeline - the password is `SEEDWATERSUNLIGHT` (case-sensitive). Hmmmm - I would never have figured that out...
 ![](/screenshots/pumpkinraising/gpgFileCracked.jpg)
 * The image that we see is actually morse code - we see `morse` being mentioned earlier as one of the seeds sellers. I tried the first two online decoders, which did not give very correct results. Though I could have pieced two and two together to get the last seed ID `69507`, I went to the walkthrough and found that the person used CyberChef, which gave the cleanest and most complete version (the one pictured at the bottom).
 ![](/screenshots/pumpkinraising/morseCodeDecode.jpg)
 * Okay, we have got all 4 seeds. Now what? The only information that we have yet to fully utilise is 2 out of 3 of the credentials, and the fact that we have SSH.
 * So there were several obstacles here. After identifying that the user `jack` is the most probable one (since it was mentioned that he is the only expert in raising healthy pumpkins), I thought that the password format would be in the form of `goblin`'s password, with the dashes. It turns out that the actual password did not have any dash, and was just a string of the seed IDs that we had found. There would have been 4! == 24 permutations, and only one is correct.
+* **Post-mortem**: I learnt from one of the walkthroughs that we can enumerate SSH usernames using a metasploit module. Run `msfconsole`, then `auxiliary/scanner/ssh/ssh_enumusers`, then `set USER_FILE /usr/share/wordlists/seclists/Usernames/Names/names.txt` and finally `run`. The username list is taken from [SecLists](https://github.com/danielmiessler/SecLists), and that list contains 10,000+ names.
+* **Note**: The SSH username enumeration is only possible if public key authentication is enabled on the SSH service.
 * The credential that would get us in is `jack:69507506099645486568`:
 ![](/screenshots/pumpkinraising/sshLogin.jpg)
 * Turns out that we are stuck in a `rbash` even though we are in. To get out of it, run `python -c 'import pty;pty.spawn("/bin/bash")'`.
@@ -81,6 +83,7 @@ By Jayanth
 * Running `sudo -l` tells us that jack can run `/usr/bin/strace` as `root`.
 * From here, it was easy for me to get the flag. Simply run `sudo strace /bin/sh` to spawn a shell as `root`, then navigate to `/root` and open up `flag.txt`. Hurray, we are done!
 * Note: Using `/bin/bash` instead is possible I suppose, but it was pretty annoying not to be able to see my command in one line as I type when the read system call was waiting for the user input. I saw whatever I type fly upwards in the terminal with bin-bash.
+* Alternative: Run `sudo strace -o /dev/null /bin/sh` so we do not see the system calls that `strace` would print. What this command additionally does is to redirect all its output to `/dev/null` (where the null device is a special device that discards the information being written into it) so we do not see it. With this command, `/bin/sh` or `/bin/bash` is fine.
 ![](/screenshots/pumpkinraising/flag.jpg)
 
 # Concluding Remarks
@@ -99,3 +102,4 @@ All in all, this was definitely a good one for me!
 
 # Reference Links
 1. https://www.hackingarticles.in/pumpkinraising-vulnhub-walkthrough/
+2. https://ethicalhackingguru.com/mission-pumpkin-level-2-pumpkinraising-vulnhub-walkthrough/
