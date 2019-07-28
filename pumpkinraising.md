@@ -13,7 +13,22 @@ By Jayanth
 * Let us first start off with exploring SSH on port 22.
 
 # SSH on Port 22
-* Running `ssh 10.0.2.5`, we are prompted with `root`'s password as expected. There is no custom banner for us to grab - we will stop here for now for SSH since we do not have more clues and head straight for port 80.
+* Running `ssh 10.0.2.5`, we are prompted with `root`'s password as expected. There is no custom banner for us to grab - we will stop here for now for SSH since we do not have more clues and head straight for port 80.  
+
+After getting all 4 seed IDs, I faced several obstacles here:
+* After identifying that the user `jack` is the most probable one (since it was mentioned that he is the only expert in raising healthy pumpkins), I thought that the password format would be in the form of `goblin`'s password, with the dashes. It turns out that the actual password did not have any dash, and was just a string of the seed IDs that we had found. There would have been 4! == 24 permutations, and only one is correct.
+* **Post-mortem**: I learnt from one of the walkthroughs that we can enumerate SSH usernames using a metasploit module. Run `msfconsole`, then `auxiliary/scanner/ssh/ssh_enumusers`, then `set USER_FILE /usr/share/wordlists/seclists/Usernames/Names/names.txt` and finally `run`. The username list is taken from [SecLists](https://github.com/danielmiessler/SecLists), and that list contains 10,000+ names.
+* **Note**: The SSH username enumeration is only possible if public key authentication is enabled on the SSH service.
+* The credential that would get us in is `jack:69507506099645486568`:
+![](/screenshots/pumpkinraising/sshLogin.jpg)
+* Turns out that we are stuck in a `rbash` even though we are in. To get out of it, run `python -c 'import pty;pty.spawn("/bin/bash")'`.
+* Navigating to one level above jack's home directory, we see that only his exists. `/etc/passwd` also concurs that he is the only user besides `root` that we would look at.
+* We cannot navigate to `/root`, and running `sudo su` with jack's password tells us that `Sorry, user jack is not allowed to execute '/bin/su' as root on Pumpkin.`.
+* Running `sudo -l` tells us that jack can run `/usr/bin/strace` as `root`.
+* From here, it was easy for me to get the flag. Simply run `sudo strace /bin/sh` to spawn a shell as `root`, then navigate to `/root` and open up `flag.txt`. Hurray, we are done!
+* Note: Using `/bin/bash` instead is possible I suppose, but it was pretty annoying not to be able to see my command in one line as I type when the read system call was waiting for the user input. I saw whatever I type fly upwards in the terminal with bin-bash.
+* Alternative: Run `sudo strace -o /dev/null /bin/sh` so we do not see the system calls that `strace` would print. What this command additionally does is to redirect all its output to `/dev/null` (where the null device is a special device that discards the information being written into it) so we do not see it. With this command, `/bin/sh` or `/bin/bash` is fine.
+![](/screenshots/pumpkinraising/flag.jpg)
 
 # HTTP on Port 80
 * Running `10.0.2.5` on our Firefox reveals this landing page. Hovering our cursor over each of the 4 images reveals a name and a description of the pumpkin.
@@ -72,19 +87,7 @@ By Jayanth
 * The image that we see is actually morse code - we see `morse` being mentioned earlier as one of the seeds sellers. I tried the first two online decoders, which did not give very correct results. Though I could have pieced two and two together to get the last seed ID `69507`, I went to the walkthrough and found that the person used CyberChef, which gave the cleanest and most complete version (the one pictured at the bottom).
 ![](/screenshots/pumpkinraising/morseCodeDecode.jpg)
 * Okay, we have got all 4 seeds. Now what? The only information that we have yet to fully utilise is 2 out of 3 of the credentials, and the fact that we have SSH.
-* So there were several obstacles here. After identifying that the user `jack` is the most probable one (since it was mentioned that he is the only expert in raising healthy pumpkins), I thought that the password format would be in the form of `goblin`'s password, with the dashes. It turns out that the actual password did not have any dash, and was just a string of the seed IDs that we had found. There would have been 4! == 24 permutations, and only one is correct.
-* **Post-mortem**: I learnt from one of the walkthroughs that we can enumerate SSH usernames using a metasploit module. Run `msfconsole`, then `auxiliary/scanner/ssh/ssh_enumusers`, then `set USER_FILE /usr/share/wordlists/seclists/Usernames/Names/names.txt` and finally `run`. The username list is taken from [SecLists](https://github.com/danielmiessler/SecLists), and that list contains 10,000+ names.
-* **Note**: The SSH username enumeration is only possible if public key authentication is enabled on the SSH service.
-* The credential that would get us in is `jack:69507506099645486568`:
-![](/screenshots/pumpkinraising/sshLogin.jpg)
-* Turns out that we are stuck in a `rbash` even though we are in. To get out of it, run `python -c 'import pty;pty.spawn("/bin/bash")'`.
-* Navigating to one level above jack's home directory, we see that only his exists. `/etc/passwd` also concurs that he is the only user besides `root` that we would look at.
-* We cannot navigate to `/root`, and running `sudo su` with jack's password tells us that `Sorry, user jack is not allowed to execute '/bin/su' as root on Pumpkin.`.
-* Running `sudo -l` tells us that jack can run `/usr/bin/strace` as `root`.
-* From here, it was easy for me to get the flag. Simply run `sudo strace /bin/sh` to spawn a shell as `root`, then navigate to `/root` and open up `flag.txt`. Hurray, we are done!
-* Note: Using `/bin/bash` instead is possible I suppose, but it was pretty annoying not to be able to see my command in one line as I type when the read system call was waiting for the user input. I saw whatever I type fly upwards in the terminal with bin-bash.
-* Alternative: Run `sudo strace -o /dev/null /bin/sh` so we do not see the system calls that `strace` would print. What this command additionally does is to redirect all its output to `/dev/null` (where the null device is a special device that discards the information being written into it) so we do not see it. With this command, `/bin/sh` or `/bin/bash` is fine.
-![](/screenshots/pumpkinraising/flag.jpg)
+* It turns out that indeed the next step that we have to take, is to gain our shell via SSH for the flag. See above section on SSH.
 
 # Concluding Remarks
 I had thought that the second part of the challenge series would be manageable for me, i.e. without having to refer to any walkthroughs at all - but I did eventually, and had to do so more than once because I had exhausted attempts with what I had already known. This also brought me back to my intent of my continued practice to work on beginner-level CTFs, as I believe that there would still be gaps that I had to fill, and things to learn.
