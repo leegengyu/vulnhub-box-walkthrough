@@ -6,8 +6,8 @@ By Jayanth
 ![](/screenshots/pumpkinfestival/loginInitial.jpg)
 * Because we are given the machine's IP address, we will skip the usual nmap scan of finding live hosts in our network and head straight for a more detailed scan with `nmap -p- -A 10.0.2.15`:
 ![](/screenshots/pumpkinfestival/hostFullScan.jpg)
-* The vulnerable machine is running only 2 services:
-1. FTP - vsftpd 2.0.8 or later on Port 21
+* The vulnerable machine is running 3 services:
+1. FTP - vsftpd 2.0.8 or later on Port 21 (the scan indicated 3.0.2 under FTP server status)
 2. HTTP - Apache httpd 2.4.7 on Port 80
 3. SSH - OpenSSH 6.6.1p1 Ubuntu on Port 6880
 * With the exception of SSH on port 6880, the other 2 services are running on the port numbers that we expected.
@@ -25,16 +25,19 @@ By Jayanth
 ![](/screenshots/pumpkinfestival/siteHTTPPage.jpg)
 * Opening up the Page Source, we see a comment that tells `harry` to "find the pumpkin", and another PumpkinToken that is hidden in the background of the page: `PumpkinToken : 45d9ee7239bc6b0bb21d3f8e1c5faa52`.
 ![](/screenshots/pumpkinfestival/siteHTTPPagePumpkinToken.jpg)
+* We also see that there is a script found near the top of the Page Source that prevents a right-click on the page.
 * Opening up `robots.txt`, we see a short list:
 ![](/screenshots/pumpkinfestival/robotsTxt.jpg)
 * I get a `404` on WordPress and `Forbidden` on tokens and users. Opening up `/store/track.txt`, we get a hit which gives jack's tracking code as `2542 8231 6783 486`:
 ![](/screenshots/pumpkinfestival/storeTrackTxt.jpg)
-* `/store` and `/img` are also `Forbidden`.
+* `/store` and `/img` are also `Forbidden`. Trying `/tokens/[token_string]`, `/wordpress/wp-login.php` and `/users/[user_name]` (e.g. jack / harry / admin) did not work too.
 * Running a `nikto` scan did not reveal anything additional to us as well: 
 ![](/screenshots/pumpkinfestival/niktoScan.jpg)
+* `gobuster` did not turn up anything else of note either:
+![](/screenshots/pumpkinfestival/gobusterScan.jpg)
 * Got a little stuck here, so let us try out SSH on port 6880...
 
 # SSH on Port 6880
 * Trying a login using `ssh 10.0.2.15 -p 6880`, it seems like we cannot login using a password - it must be a private key. I guess brute-forcing our way in is not an option in this case.
 ![](/screenshots/pumpkinfestival/sshAttemptLogin.jpg)
-* To-be-continued
+* To-be-continued...
