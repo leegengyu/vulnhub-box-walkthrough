@@ -16,9 +16,12 @@ By Jayanth
 * Running `ssh 10.0.2.5`, we are prompted with `root`'s password as expected. There is no custom banner for us to grab - we will stop here for now for SSH since we do not have more clues and head straight for port 80.  
 
 After getting all 4 seed IDs, I faced several obstacles here:
-* After identifying that the user `jack` is the most probable one (since it was mentioned that he is the only expert in raising healthy pumpkins), I thought that the password format would be in the form of `goblin`'s password, with the dashes. It turns out that the actual password did not have any dash, and was just a string of the seed IDs that we had found. There would have been 4! == 24 permutations, and only one is correct.
-* **Post-mortem**: I learnt from one of the walkthroughs that we can enumerate SSH usernames using a metasploit module. Run `msfconsole`, then `auxiliary/scanner/ssh/ssh_enumusers`, then `set USER_FILE /usr/share/wordlists/seclists/Usernames/Names/names.txt` and finally `run`. The username list is taken from [SecLists](https://github.com/danielmiessler/SecLists), and that list contains 10,000+ names.
-* **Note**: The SSH username enumeration is only possible if public key authentication is enabled on the SSH service.
+* We had to identify that the username is `jack`. After identifying this username is the most probable one (since it was mentioned that he is the only expert in raising healthy pumpkins), I thought that the password format would be in the form of `goblin`'s password, with the dashes.
+* It turns out that the actual password did not have any dash, and was just a string of the seed IDs that we had found. There would have been 4! == 24 permutations, and only one out of these 24 is correct.
+* **Post-mortem**: I learnt from one of the walkthroughs that we can enumerate SSH usernames using a metasploit module. Run `msfconsole`, then `use auxiliary/scanner/ssh/ssh_enumusers`, then `set RHOSTS 10.0.2.5`, `set USER_FILE /usr/share/wordlists/SecLists/Usernames/Names/names.txt` and finally `run` (or `exploit`). The username list is taken from [SecLists](https://github.com/danielmiessler/SecLists), and that list contains 10,000+ names.
+* **Note1**: This did **not quite work out for me (find out why)** - it started saying that each of the username in the provided list exists as a username for the SSH service.
+![](/screenshots/pumpkinraising/msfconsoleSSHUsernameEnum.jpg)
+* **Note2**: The SSH username enumeration is only possible if public key authentication is enabled on the SSH service.
 * The credential that would get us in is `jack:69507506099645486568`:
 ![](/screenshots/pumpkinraising/sshLogin.jpg)
 * Turns out that we are stuck in a `rbash` even though we are in. To get out of it, run `python -c 'import pty;pty.spawn("/bin/bash")'`.
