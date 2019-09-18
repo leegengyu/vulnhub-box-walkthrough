@@ -25,10 +25,10 @@ By Jayanth
 ![](/screenshots/pumpkinfestival/siteHTTPPage.jpg)
 * Opening up the Page Source, we see a comment that tells `harry` to "find the pumpkin", and another PumpkinToken that is hidden in the background of the page: `PumpkinToken : 45d9ee7239bc6b0bb21d3f8e1c5faa52`.
 ![](/screenshots/pumpkinfestival/siteHTTPPagePumpkinToken.jpg)
-* We also see that there is a script found near the top of the Page Source that prevents a right-click on the page.
-* Opening up `robots.txt`, we see a short list:
+* [Side-note] There is a script found starting at line 25 of the Page Source that prevents right-clicking on the page.
+* Opening up `robots.txt`, we see a few entries:
 ![](/screenshots/pumpkinfestival/robotsTxt.jpg)
-* I get a `404` on WordPress and `Forbidden` on tokens and users. Opening up `/store/track.txt`, we get a hit which gives jack's tracking code as `2542 8231 6783 486`:
+* I get a `404 Not Found` on `/wordpress` and `Forbidden` on `/tokens` and `/users`. Opening up `/store/track.txt`, we get a hit which gives jack's tracking code as `2542 8231 6783 486`:
 ![](/screenshots/pumpkinfestival/storeTrackTxt.jpg)
 * `/store` and `/img` are also `Forbidden`. Trying `/tokens/[token_string]`, `/wordpress/wp-login.php` and `/users/[user_name]` (e.g. jack / harry / admin) did not work too.
 * Running a `nikto` scan did not reveal anything additional to us as well: 
