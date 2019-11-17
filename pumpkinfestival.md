@@ -51,6 +51,7 @@ By Jayanth
 * I tried to access `/wp-config.php`, which returned me a `200 OK` blank page, the same result given when I tried to load `/wp-content` directory.
 * I attempted to use `hydra` and `wpscan` to brute-force for admin and morse's credentials, but more than 30 minutes of runtime on both usernames yielded nothing so I did not pursue it.
 * At this point I did not want to spend more time trying to brute-force the password, so I went back to the reference walkthrough and started from the top, seeing if I missed anything out from my earlier findings (and I did, again!).
+* **Self-Reflection**: Interestingly, Pumpkin Raising had one of its password inserted into its homepage as well (`SEEDWATERSUNLIGHT`). I should have taken the cue from it.
 * Turns out that `Alohomora!`, which was bolded on our very first home page, is the password to `admin`. Another slip through my earlier pair of eyes.
 * After logging in, I find that I am having the `administrator` role.
 * Heading to the `Posts` section, I find a draft post that gives us our next token: `PumpkinToken : f2e00edc353309b40e1aed18e18ab2c4`.
@@ -62,6 +63,16 @@ By Jayanth
 ![](/screenshots/pumpkinfestival/morseToken.jpg)
 * There was nothing under the profile of `admin`.
 * Nothing else of note on the WordPress site, but we are not able to edit or add any Themes or Plugin files. Hmm.
+* I remembered the hint about generating our ticket, with the phrase `Pumpkin Carnival` being bolded. I added `pumpkin.carnival 10.0.2.15` and `pumpkins.carnival 10.0.2.15` to `/etc/hosts`.
+* Loading `pumpkin.carnival` on our browser led us back to the first home page that we encountered when we first entered `10.0.2.15`.
+* Reaching out for another lifeline from another walkthrough, I found that there was a token that we missed under `/tokens` - `token.txt`! I tried many permutations prior to this, and this really felt like a slap for its simplicity: `PumpkinToken : 2c0e11d2200e2604587c331f02a7ebea`.
+* I had also neglected a piece of information under `readme.html`, after seeing the short message regarding the removal of the content. There was a string at the next line `K82v0SuvV1En350M0uxiXVRTmBrQIJQN78s`, that did not appear to be of significance. I had thought that it was some random, useless hash code.
+* Running the string on `hash-identifier` yields no results, and only after looking at the walkthrough, I discovered that it is a base-62 encoded string. We could use CyberChef (as was so in Pumpkin Raising) to decode it, or [this online decoder](https://base62.io/). The first result that turned up when I googled for "base62 decode" found the string to be an invalid base-62 one.
+* Not exactly sure how one could have found it to be encoded as base62. CyberChef could not detect my string as being encoded as such, and there are 5 different baseXY encodings on CyberChef to choose from (by searching using "from base").
+* After decoding it, we get `morse & jack : Ug0t!TrIpyJ`.
+* There is no account `morse & jack` or `jack` in WordPress, so let us try logging in as `morse`. His password turned out to be the string indeed. This account has limited capabilities and its profile information has already been explored when we were logged in as `admin`.
+* I did not know where else to use the account credentials for `jack`, because we had already covered FTP and WordPress. I had thought that the anonymous login was all to the FTP server, but trying to login with `jack:Ug0t!TrIpyJ` does not work.
+* To-be-continued...
 
 ## SSH on Port 6880 ##
 * Trying a login using `ssh 10.0.2.15 -p 6880`, it seems like we cannot login using a password - it must be a private key. I guess brute-forcing our way in is not an option in this case.
@@ -75,6 +86,7 @@ By Jayanth
 * 06c3eb12ef2389e2752335beccfb2080 (second home page's page source)
 * f2e00edc353309b40e1aed18e18ab2c4 (draft post)
 * 7139e925fd43618653e51f820bc6201b (morse biological info)
+* 2c0e11d2200e2604587c331f02a7ebea (token.txt)
 
 ## References: ##
 1. https://www.hackingarticles.in/mission-pumpkin-v1-0-pumpkinfestival-vulnhub-walkthrough/
