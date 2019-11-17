@@ -150,6 +150,7 @@ By g0tmi1k
 ![](/screenshots/stapler/blogblogLandingPage.jpg)
 * Note: We recognise that it is a WordPress site based on what we see being stated right at the bottom of the page: `Proudly powered by WordPress`.
 * I headed to the login page at `/wp-login.php`, and ran `hydra -L usernames.txt -P formattedwordlist.txt -S -s 12380 10.0.2.18 http-form-post '/blogblog/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'`:
+* Note-to-self: Missing information/screenshot here?
 * `usernames.txt` consists of:
 1. `harry`: FTP banner
 2. `barry`: SSH banner
