@@ -49,13 +49,32 @@ By Jayanth
 * Enumerating users using the scan tool showed us that there was another valid username `morse`. The third account can be ignored since I was the one who had just created it using the Register function.
 ![](/screenshots/pumpkinfestival/wpscanAccountEnum.jpg)
 * I tried to access `/wp-config.php`, which returned me a `200 OK` blank page, the same result given when I tried to load `/wp-content` directory.
-* Attempting `hydra` to brute-force for admin and morse's credentials. To-be-continued...
+* I attempted to use `hydra` and `wpscan` to brute-force for admin and morse's credentials, but more than 30 minutes of runtime on both usernames yielded nothing so I did not pursue it.
+* At this point I did not want to spend more time trying to brute-force the password, so I went back to the reference walkthrough and started from the top, seeing if I missed anything out from my earlier findings (and I did, again!).
+* Turns out that `Alohomora!`, which was bolded on our very first home page, is the password to `admin`. Another slip through my earlier pair of eyes.
+* After logging in, I find that I am having the `administrator` role.
+* Heading to the `Posts` section, I find a draft post that gives us our next token: `PumpkinToken : f2e00edc353309b40e1aed18e18ab2c4`.
+![](/screenshots/pumpkinfestival/tokenWordPressDraftPost.jpg)
+* Heading to the `Pages` section, we find 6 pages, with one of the top two pages that gave us the hint of using all of our tokens to "generate our ticket to the Pumpkin Carnival".
+![](/screenshots/pumpkinfestival/pageHint.jpg)
+* The top 2 pages had several revisions to it - I went through all of them, thinking that I could find another token but to no avail.
+* Heading to the `Users` section, I opened up the profile of `morse`, and found another token, `PumpkinToken : 7139e925fd43618653e51f820bc6201b` under the `Biological Info` section!
+![](/screenshots/pumpkinfestival/morseToken.jpg)
+* There was nothing under the profile of `admin`.
+* Nothing else of note on the WordPress site, but we are not able to edit or add any Themes or Plugin files. Hmm.
 
 ## SSH on Port 6880 ##
 * Trying a login using `ssh 10.0.2.15 -p 6880`, it seems like we cannot login using a password - it must be a private key. I guess brute-forcing our way in is not an option in this case.
 ![](/screenshots/pumpkinfestival/sshAttemptLogin.jpg)
 * Besides attempting a login as `root`, trying `jack` and `harry` also did not work.
 * To-be-continued...
+
+## Token Findings ##
+* 2d6dbbae84d724409606eddd9dd71265 (FTP server)
+* 45d9ee7239bc6b0bb21d3f8e1c5faa52 (first home page's page source)
+* 06c3eb12ef2389e2752335beccfb2080 (second home page's page source)
+* f2e00edc353309b40e1aed18e18ab2c4 (draft post)
+* 7139e925fd43618653e51f820bc6201b (morse biological info)
 
 ## References: ##
 1. https://www.hackingarticles.in/mission-pumpkin-v1-0-pumpkinfestival-vulnhub-walkthrough/
