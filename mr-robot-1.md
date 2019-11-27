@@ -52,9 +52,12 @@ Explanation of how the `hydra` command works:
 * `-p testpassword`: we are not trying to crack passwords of a known user here - so instead of testpassword, you can insert any random string as the password.
 * (optional) `-V`: show login (username) and password for each attempt - if you want to see hydra doing its work, include this perimeter (else, will display only valid results once found).
 * In the parameters after specifying the protocol (`http-post-form`) to use, we insert 3 more parameters: the link to the login site, where the username and password which hydra will test will go, and how to determine the success/failure of each attempt.
-* To find out where the login credentials will go, we have to open the page source of the login form and take the `name` attribute values for the username and password input fields respectively:
+* Previously, the method that I learnt to find out the relative positioning of the login credentials fields is by opening the page source of the login form and taking the `name` attribute values for the username and password input fields respectively:
 ![](/screenshots/mr-robot-1/loginFormPageSource.jpg)
-* Next, we need to find a string that distinguishes between a success/failure case. In this case, `Invalid username` is what hydra will see in most of its attempts, and it will flag those outcomes with this particular substring in its results as failed cases.
+* However, what we should really be doing is to intercept a login request, and see what parameters are sent in the POST request:
+![](/screenshots/mr-robot-1/loginRequestIntercept.jpg)
+* While there is a `redirect_to` and `testcookie` parameter sent alongside the credentials in the request body, if we were to independently remove them from the request, it appears that the request is still successfully executed. Thus, they are not required as part of the request when crafting the `hydra` command.
+* Next, we need to find a string that identifies a 'fail' case. In this case, `Invalid username` is what hydra will see in most of its attempts, and only results not containing this string will be considered as a 'success' case.
 * Note: We cannot use the string `Error` to distinguish because even if we get a valid username, the page will still flag it as a negative result because the result page will still contain an error message, since the password is incorrect. Thus, we will only get negatives from the hydra scan.
 * Having found an existing username `elliot` for the WordPress site, our next step is to brute-force the password for that account.
 
@@ -65,6 +68,7 @@ Explanation of how the `hydra` command works:
 * There might be duplicates in the wordlist, so we will sort the list first, then remove the duplicates: `cat fsocity.dic | sort | uniq > fsocity2.dic`. After doing so, we see that there are now only 11,451 lines within the modified wordlist (fsocity2.dic), which is just 1+% of the original wordlist. We are very much likely to get the password in under 10 minutes this time.
 * Run `hydra -l elliot -P fsocity2.dic 10.0.2.5 http-post-form '/wp-login.php:log=elliot&pwd=^PASS^:S=Dashboard'`:
 ![](/screenshots/mr-robot-1/hydraBruteForcePassword.jpg)
+* Note: We see `S=` at the end of the hydra command to tell the tool what we are expecting to see for a 'success' case. Earlier on, when we were brute-forcing for the username, the string entered would indicate a 'fail' case (without the need to specify `F=`.
 * It took around 10 minutes for me to get the password `ER28-0652`.
 * To-do: *Perhaps find some alternative configuration to speed up the brute-forcing process because `wpscan` took only a minute vs. hydra's 10 minutes*.
 
