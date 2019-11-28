@@ -2,6 +2,9 @@
 [VulnHub link](https://www.vulnhub.com/entry/dc-6,315/)  
 By DCAU
 
+* Note: On some occasions below, the IP address might not match because this machine was revisited after some time.
+
+## Enumeration ##
 * As with all of the previous iterations of the DC-series, we are first greeted with a login page that requires users to specify both the username and the password:
 ![](/screenshots/dc-6/loginInitial.jpg)
 * Common login credentials such as `admin:admin` and `admin:password` do not work.
@@ -25,13 +28,17 @@ By DCAU
 * But before we do so, let us use Burp Suite to confirm the parameters that we are sending as part of a login attempt:
 ![](/screenshots/dc-6/wordPressLoginBurpSuiteIntercept.jpg)
 * There is also a hint given by the author of this challenge in the page under the `Clue` section that we should run `cat /usr/share/wordlists/rockyou.txt | grep k01 > passwords.txt` to save time. `rockyou.txt` by itself is a huge wordlist and the author wants us to focus our efforts in solving other parts of the challenge, by not spending too much time on the dictionary attack. The curated wordlist that we are using contains only words with the substring `k01`, and has only 2668 entries.
-* Run `hydra -l admin -P passwords.txt wordy http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'`.
-* It turns out that admin's password is not within the list. Some other user's password is likely to be within it though. Run `wpscan --url http://wordy --enumerate u`:
+* Run `hydra -l admin -P passwords.txt wordy http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^:S=Dashboard'`.
+* Note: Only `log` and `pwd` parameters are required for the brute-forcing to work - I tried to remove the other parameters for an intercepted request and the response came back the same.
+* No positive results were returned: turns out that admin's password is not within the list. Some other user's password is likely to be within it though. Run `wpscan --url http://wordy --enumerate u` to find out if there are any other usernames:
 ![](/screenshots/dc-6/wordPressUserList.jpg)
-* There are 4 users whom we were unaware of previously: `sarah`, `graham`, `mark` and `jens`. Let us add them into `usernames.txt`.
-* Now, we will run `hydra` again, but without attempting to get admin's password: hydra -L usernames.txt -P passwords.txt wordy http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^&wp-submit=Log In&testcookie=1:S=Dashboard'.
+* There are 4 users whom we were unaware of previously: `sarah`, `graham`, `mark` and `jens`. Let us add these 4 names into `usernames.txt`.
+* Now, we will run `hydra` again, but without attempting to get admin's password: `hydra -L usernames.txt -P passwords.txt wordy http-form-post '/wp-login.php:log=^USER^&pwd=^PASS^:S=Dashboard'`.
+* Note for hydra command: Instead of defining the success string as "Dashboard", we can define the negative string as "incorrect", and the command will still work the same.
 ![](/screenshots/dc-6/hydraPasswordResults.jpg)
 * We managed to get a set of credentials: `mark:helpdesk01`.
+
+## Logging in as Mark ##
 * After logging in as `mark`, we find out that there is 1 post titled `Hello world!` - nothing special.
 ![](/screenshots/dc-6/wordPressPost.jpg)
 * The `Tools` section reveals nothing either.
@@ -62,9 +69,10 @@ By DCAU
 * The last piece of information seen in the screenshot is the `readme.html` file, which did not provide anything useful.
 * Am pretty stuck at this point in time, and only then realised that I had missed out looking for vulnerabilities within the plugins of the WordPress site! Run `wpscan -v --plugins-detection aggressive --url http://wordy`:
 ![](/screenshots/dc-6/wpscanPlugins.jpg)
+* Note: Using the option `--enumerate -ap` (all plugins) will result in no plugins being detected, because it runs `via Passive Methods`. Thus, the aggressive option has to be used. From what I understand in a [question raised on their GitHub issues page](https://github.com/wpscanteam/wpscan/issues/845), passive mode only scans for plugins at the starting page, with no intrusive scans performed.
 * There are 3 plugins identified: `akismet`, `plainview-activity-monitor` and `user-role-editor`. The latter 2 have vulnerabilities that result in a Remote Command Execution (RCE) and Privilege Escalation respectively, ones that are more interesting that akismet's unauthenticated stored XSS. Hence, we will try out the latter 2 first.
 
-# Method 1: Remote Command Execution using plainview-activity-monitor
+## Method 1: Remote Command Execution using plainview-activity-monitor ##
 * The GitHub reference link given by `wpscan` is invalid. The link is not entirely incorrect - perhaps the file was renamed because only the last part of the link is incorrect. The correct link is [here](https://github.com/aas-n/CVE/tree/master/CVE-2018-15877).
 * Open `poc.html`, and have a look.
 * Alternatively, instead of using the given POC, we can simply inject the command via the user interface!
@@ -85,10 +93,11 @@ By DCAU
 ![](/screenshots/dc-6/ncEstablishShell.jpg)
 * Note: Remember to change `maxlength` attribute value first before doing the command injection!
 
-# Method 2: Privilege Escalation using User Role Editor
+## Method 2.1: Manual WordPress Privilege Escalation using User Role Editor ##
 * I found this [article](http://sec.sangfor.com/vulns/321.html) to have given me a better understanding of how I can carry out the privilege escalation, as compared to the [Wordfence article](https://www.wordfence.com/blog/2016/04/user-role-editor-vulnerability/) that explained better the underlying code that resulted in the vulnerability.
 * Using Burp Suite, intercept the request when we press `Update Profile`, as user `mark`.
-* Concatenate the string `&ure_other_roles=administrator` (as explained in the article) to the end of the POST request.
+* While we are able to explicitly select additional roles for new users when creating them, we do not see the option to add additional roles for ourself as `mark` (probably because of security concerns).
+* However, we are still able to indirectly do so by including it as part of the POST request to update our own profile: concatenate the string `&ure_other_roles=administrator` (as explained in the article) to the end of the long string of parameters.
 ![](/screenshots/dc-6/burpSuiteAddAdminRole.jpg)
 * `Forward` the next couple of requests, and we will then see that we are now having the `administrator` role!
 ![](/screenshots/dc-6/userRoleEditorPluginPrivEsc.jpg)
@@ -96,7 +105,23 @@ By DCAU
 ![](/screenshots/dc-6/wordPressReverseShellError.jpg)
 * Note: I could have uploaded a `malicious-wordpress-plugin` instead (which I did not attempt), but wanted to try my hand at a direct edit, which worked before.
 
-# After getting our shell
+## Method 2.2: Metasploit Privilege Escalation using User Role Editor ##
+* When I tried to remove my role as an administrator to try using Metasploit to do this, I could not do so somehow - and had to reset the machine.
+* When I saw an [Exploit-DB page for the exploit](https://www.exploit-db.com/exploits/44595) that had it as a Metasploit module, I tried for awhile to find it after running `msfconsole`. I ran a `search` using various parts of the name but to no avail.
+* Only then did it dawn upon me that I had to manually add it as a module in this case. Turns out that Metasploit looks for its modules in 2 locations: `/usr/share/metasploit-framework/modules/` primarily and `~/.msf4/modules/` for custom modules, according to [OffSec's post](https://www.offensive-security.com/metasploit-unleashed/modules-and-locations/). Silly me.
+* I ran `searchsploit WordPress Plugin User Role Editor` and found 2 results. What we are looking at is found in `/usr/share/exploitdb/exploits/php/webapps/44595.rb`.
+* Copy the file into our custom modules directory: `cp /usr/share/exploitdb/exploits/php/webapps/44595.rb /root/.msf4/modules/exploits/php/webapps/` - and we get an error to say that the directory does not exist. Because this is my first time introducing a custom module, the modules directory was empty. We have to manually `mkdir` those 3 missing directories, before running the `cp` command again.
+* Run `updatedb` on Metasploit, and while it does not give any success/failure messages, the database has been updated and we have to restart Metasploit.
+* **Important**: I have always been running msfconsole with a database error message at the very beginning. Without running the database `service postgresql start`, `updatedb` does not work.
+* After successfully updating the database, we are able to search for our custom module by its numerical identifier `44595`:
+![](/screenshots/dc-6/metasploitModuleAdded.jpg)
+* However, I was unable to load it:
+![](/screenshots/dc-6/metasploitUnableToLoad.jpg)
+* I am currently checking in with others who might be familiar with these 4 error messages found in the log file at `/root/.msf4/logs/framework.log` when I tried to load the module. I was not able to find anyone with a similar error message through Google:
+![](/screenshots/dc-6/metasploitErrorLogs.jpg)
+* To-be-continued...
+
+# Reverse Shell Connection Succeeded
 * We have our shell now, and we are user `www-data` as expected.
 * Run `python -c 'import pty; pty.spawn("/bin/bash")'` to spawn our interactive TTY shell.
 * Next, run `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we can possibly exploit:
@@ -121,6 +146,8 @@ By DCAU
 ![](/screenshots/dc-6/backupsScript.jpg)
 * However, running the script does not work at the moment, as expected because our current user is not `jens`, nor does our current user belong to group `devs`:
 ![](/screenshots/dc-6/jensBackupsErrorMessage.jpg)
+
+## Logging in as Graham ##
 * Next, I decided to switch to user `graham`: `su graham`, and entered his password that we had just discovered.
 * Note: `su mark` with `helpdesk01` does not work.
 * I headed back to run `backups.sh`, after figuring out that `graham` belonged to the group `devs`, where those who were part of the group would have the same permissions as `jens`, the file creator in this case. However, the script was still unsuccessfully executed (as expected because `backups.tar.gz` is missing), but we made some 'headway' still, as compared to running it as user `www-data`.
@@ -134,6 +161,8 @@ By DCAU
 * Note: We can replace `/bin/bash` with `/bin/sh` - there is no difference between the two, but the former provides a nicer interface.
 * Having said so, we would next run `backups.sh` as user `jens`, allowing us to spawn a shell with the identity of `jens`: `sudo -u jens ./backups.sh`.
 ![](/screenshots/dc-6/escalateAsUserJens.jpg)
+
+## Logging in as Jens & Privilege Escalation (to root) ##
 * Next, I ran `sudo -l` to see what commands that we can run as another user, and it turns out that we can run `nmap` as `root`!
 ![](/screenshots/dc-6/sudoCommandsJens.jpg)
 * Note: The use of `nmap` for privilege escalation is similar to `mr-robot-1`.
