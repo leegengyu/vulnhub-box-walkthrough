@@ -121,7 +121,7 @@ By DCAU
 ![](/screenshots/dc-6/metasploitErrorLogs.jpg)
 * To-be-continued...
 
-# Reverse Shell Connection Succeeded
+# Reverse Shell Connection Established
 * We have our shell now, and we are user `www-data` as expected.
 * Run `python -c 'import pty; pty.spawn("/bin/bash")'` to spawn our interactive TTY shell.
 * Next, run `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we can possibly exploit:
