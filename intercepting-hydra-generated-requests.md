@@ -1,9 +1,9 @@
 # Intercepting Hydra-generated Requests via Burp Suite Proxy
 
 * Assuming that there is a proxy listener set up in Burp Suite with the interface `127.0.0.1:8080` that is running, run the following commands in Terminal:
-1. `HYDRA_PROXY_HTTP="http://127.0.0.1:8080/"` (define a variable)
-2. `export HYDRA_PROXY_HTTP` (export the variable as an environment variable)
-3. `printenv | grep HYDRA` (verify that the environment variable is successfully set)
+1. `export HYDRA_PROXY_HTTP="http://127.0.0.1:8080/"` 
+2. `printenv | grep HYDRA` (verify that the environment variable is successfully set)
+* Initially, what I learnt was 2 separate commands (for command 1): `HYDRA_PROXY_HTTP="http://127.0.0.1:8080/"` to define a variable first, before `export HYDRA_PROXY_HTTP`, which is to export the variable as an environment variable. However, I learnt subsequently that I could combine the two commands into one for efficiency.
 * Run a `hydra` command to brute-force something, and we observe the following line printed as part of the output (found after the start date/time): `[INFO] Using HTTP Proxy: http://127.0.0.1:8080/`.
 * This shows that the above has been set up correctly, and hydra's requests will now be seen/intercepted in Burp Suite.
 
