@@ -110,15 +110,20 @@ By DCAU
 * When I saw an [Exploit-DB page for the exploit](https://www.exploit-db.com/exploits/44595) that had it as a Metasploit module, I tried for awhile to find it after running `msfconsole`. I ran a `search` using various parts of the name but to no avail.
 * Only then did it dawn upon me that I had to manually add it as a module in this case. Turns out that Metasploit looks for its modules in 2 locations: `/usr/share/metasploit-framework/modules/` primarily and `~/.msf4/modules/` for custom modules, according to [OffSec's post](https://www.offensive-security.com/metasploit-unleashed/modules-and-locations/). Silly me.
 * I ran `searchsploit WordPress Plugin User Role Editor` and found 2 results. What we are looking at is found in `/usr/share/exploitdb/exploits/php/webapps/44595.rb`.
-* Copy the file into our custom modules directory: `cp /usr/share/exploitdb/exploits/php/webapps/44595.rb /root/.msf4/modules/exploits/php/webapps/` - and we get an error to say that the directory does not exist. Because this is my first time introducing a custom module, the modules directory was empty. We have to manually `mkdir` those 3 missing directories, before running the `cp` command again.
+* Copy the file into our custom modules directory: `cp /usr/share/exploitdb/exploits/php/webapps/44595.rb /root/.msf4/modules/auxiliary/php/webapps/` - and we get an error to say that the directory does not exist. Because this is my first time introducing a custom module, the modules directory was empty. We have to manually `mkdir` those 3 missing directories, before running the `cp` command again.
+* **Important**: Just because the original code was located in `/exploits/php/webapps/` does not mean that it should be copied into the same folder into `/.msf4/modules`. I did that and encountered some error messages about dependencies not found and could not `use` the module.
+* Looking at the first line of the code in the .rb file, we see `class MetasploitModule < Msf::Auxiliary`. This means that it should be under the auxiliary category, as seen from [this Wiki article](https://en.wikibooks.org/wiki/Metasploit/DevelopingAuxiliaryModules).
+* Note: If you encountered any error trying to `use` the module or otherwise, look into the Metasploit log files at `/root/.msf4/logs/framework.log` like I did.
 * Run `updatedb` on Metasploit, and while it does not give any success/failure messages, the database has been updated and we have to restart Metasploit.
 * **Important**: I have always been running msfconsole with a database error message at the very beginning. Without running the database `service postgresql start`, `updatedb` does not work.
 * After successfully updating the database, we are able to search for our custom module by its numerical identifier `44595`:
 ![](/screenshots/dc-6/metasploitModuleAdded.jpg)
-* However, I was unable to load it:
-![](/screenshots/dc-6/metasploitUnableToLoad.jpg)
-* I am currently checking in with others who might be familiar with these 4 error messages found in the log file at `/root/.msf4/logs/framework.log` when I tried to load the module. I was not able to find anyone with a similar error message through Google:
-![](/screenshots/dc-6/metasploitErrorLogs.jpg)
+* Use the module with the command `use auxiliary/php/webapps/44595`.
+* We have to set the `username`, `password`, and `rhosts` values.
+* When I tried to run `exploit`, I was getting the error that WordPress was not being detected:
+![](/screenshots/dc-6/metasploitExploitError.jpg)
+* **To-be-revisited**: At this point, I'm not sure how to solve this issue - I suspect that it is because of the mapping `10.0.2.11 wordy` in `/etc/hosts`. I tried to set rhosts as either `wordy` or `10.0.2.11`, but both did not work. I wanted to see the requests that were being made by Metasploit to confirm my suspicions, and tried to use the proxy option by `set proxies http:127.0.0.1:8080` with my Burp Suite proxy ready. However, no requests were intercepted and the exploit hung for awhile before eventually throwing up the same error message as the run without a proxy.
+* Also another side-note: The formatting of the output runs off (columns and thus the contents of each row were misaligned) when I ran `options` - not sure why.
 * To-be-continued...
 
 # Reverse Shell Connection Established
