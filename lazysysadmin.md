@@ -2,6 +2,7 @@
 [VulnHub link](https://www.vulnhub.com/entry/lazysysadmin-1,205/)  
 By Togie Mcdogie
 
+## Enumeration ##
 * We are first greeted with a login page that requires users to specify both the username and the password:
 ![](/screenshots/lazysysadmin/loginInitial.jpg)
 * Common login credentials such as `admin:admin` and `admin:password` do not work.
@@ -13,7 +14,7 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/hostFullScan.jpg)
 * Looking at the services which the vulnerable VM is running, there are 5 main ones - SSH at port 22, Apache HTTP server at port 80, SMB at ports 139 and 445, MySQL at port 3306 and IRC at port 6667.
 
-# Apache Web Server at Port 80
+## Apache Web Server at Port 80 ##
 * Visiting `http://10.0.2.14` shows us a non-standard site (powered by `Silex`), i.e. it had probably been edited from the original template - signs include "iDontCare", "AntiCare +", etc:
 ![](/screenshots/lazysysadmin/siteWebServer.jpg)
 * Nothing quite interesting in the main page - scrolling down only tells us that the author's mind on MySQL is one of confusion, and some encouragement from the author.
@@ -33,6 +34,8 @@ By Togie Mcdogie
 * Attempting a login results in an error, stating that we are unable to log in to the MySQL server because the connection failed. I guess there is no chance for us to do a wordlist attack here then.
 ![](/screenshots/lazysysadmin/phpMyAdminPageAttemptedLogin.jpg)
 * Googling about this error leads to proposed solutions of reinstalling phpMyAdmin, probably because of misconfigurations in settings. Seems like a dead-end.
+
+### Gaining Access to MySQL Database ###
 * **Continuation**: After getting a set of MySQL database credentials `Admin:TogieMYSQL12345^^` (see end of `NetBIOS-SSN Samba SMBD at Port 139` section), I realised that this error which we have been seeing does not actually mean that the database is totally down.
 * Logging into phpMyAdmin as `Admin`, we see:
 ![](/screenshots/lazysysadmin/phpMyAdminPageSuccessfulLogin.jpg)
@@ -40,6 +43,8 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/phpMyAdminPageCannotViewTable.jpg)
 * Running `gobuster -e -u http://10.0.2.14/phpmyadmin -w /usr/share/wordlists/dirb/common.txt` does not yield much useful information either:
 ![](/screenshots/lazysysadmin/gobusterPhpMyAdmin.jpg)
+
+### Exploring WordPress Site ###
 * Let us move onto our second result - `/wordpress`. Accessing it brings us to another site:
 ![](/screenshots/lazysysadmin/wordpressTR2.jpg)
 * There is only one post, which is titled `Hello world!` and posted by user `admin`:
@@ -65,6 +70,8 @@ By Togie Mcdogie
 *: Note: It turns out that the password is pretty unique to this challenge, which explains that it was not common enough to be found on our wordlist, and thus resulting in our failed `hydra` attempt.
 * From the `Dashboard` we can also confirm that the latest `wpscan` result which detected the WordPress version `4.8.9` as being correct. I am still not sure why my initial `wpscan` runs resulted in the wrong version.
 * Looking at the `Users` section, we can also confirm that there is only 1 user, and that is `Admin`.
+
+### Gaining Reverse Shell ###
 * Next, we will be uploading our reverse shell code onto one of the WordPress files. I have chosen to use the `comments.php` file, i.e. the Comments file under `Themes`. Looking at the list of files found on the right-hand side using the Themes Editor, `comments.php` is found near the top of the list.
 * Copy the contents from `/usr/share/webshells/php/php-reverse-shell.php` and edit the `$ip` and `$port` to that of our Kali VM IP address and a chosen port just for the reverse shell respectively. Insert the code at the start of the WordPress file (for simplicity).
 ![](/screenshots/lazysysadmin/themesReverseShellCode.jpg)
@@ -80,6 +87,8 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/suTogie.jpg)
 * Trying to navigate out of our current directory led us to realise that we are now stuck within a restricted bash shell:
 ![](/screenshots/lazysysadmin/rbashRestricted.jpg)
+
+### Escaping Restricted Shell ###
 * To escape `rbash`, simply run the command which we have always been using to get our interactive TTY shell: `python -c 'import pty;pty.spawn("/bin/bash")'`. This was something that I had learnt from another walkthrough. However, this method would only work if `python` is installed.
 * Alternatively (from what I had learnt previously), run `vi .profile` (or any other available file) to open the vi text editor first and then enter `:set shell=/bin/sh`, followed by `:shell`. Finally, run `python -c 'import pty; pty.spawn("/bin/bash")'` to get our interactive TTY shell.
 ![](/screenshots/lazysysadmin/escapingrBash.jpg)
@@ -89,6 +98,8 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/vulnerableOSVersion.jpg)
 * At this point, while we are able to find OS exploits relating to this version of Ubuntu, they are coded in the C language and we are not able to execute the binary files that were compiled from them - the error given is `cannot execute binary file: Exec format error`. Moreover, `gcc` is not installed on the vulnerable machine.
 * I was pretty stuck at this point in time, and even resorted to `sudo apt-get install gcc`.
+
+### Privilege Escalation (to root) ###
 * Little did I know that I already had the privileges to be `root` all this time!
 ![](/screenshots/lazysysadmin/sudoUserCommandList.jpg)
 * I had run `sudo -l` earlier, but I had dismissed it because I did not know the implications of seeing `(ALL : ALL) ALL`. While I was used to seeing a single entry or two under the list of commands that our current user can run, this was my first time seeing a line full of `ALL`. I was thinking, hmm - I can run all commands as everyone - what did this mean?
@@ -100,7 +111,7 @@ By Togie Mcdogie
 ![](/screenshots/lazysysadmin/flag.jpg)
 * Not sure what the strings at the start and end of the files mean. But anyway, we are done for this challenge!
 
-# SSH at Port 22
+## SSH at Port 22 ##
 * Learning my lesson from `stapler`, I will now attempt to connect through SSH to see if there is any custom banner that greets us (with possibly useful information):
 ![](/screenshots/lazysysadmin/sshAttemptedLogin.jpg)
 * Turns out there is nothing much, but it is mentioned that this is `Web_TR1`, and we see from the WordPress site at port 80 that it is `Web_TR2`. Not sure what TR means but they are very likely to be linked.
@@ -108,7 +119,7 @@ By Togie Mcdogie
 * Attempting an SSH login later on (because I found out that `togie` could be a possible username) leads to a message that forces us to remove the offending ECDSA key. I had never seen such a message before, but I am guessing that this might be a measure to block brute-force attempts(?) Or perhaps it was simply something that I had triggered.
 * Failed attempt: `OpenSSH < 6.6 SFTP - Command Execution` does not work for us because we do not have a set of credentials (i.e. no authenticated session at all).
 
-# NetBIOS-SSN Samba SMBD at Port 139
+## NetBIOS-SSN Samba SMBD at Port 139 ##
 * Running `enum4linux 10.0.2.14` reveals that `togie` is a username.
 ![](/screenshots/lazysysadmin/enum4linuxResults.jpg)
 * Note: Not very surprising, considering how the author of this vulnerable VM shares the same name, and we had seen the name repeatedly mentioned in the `Hello world!` post on the WordPress site.
@@ -137,14 +148,14 @@ By Togie Mcdogie
 * But that is fine because the set of MySQL database credentials that we had just found also serves as a set of WordPress account credentials (see section on port 80)!
 * Failed attempt: `exploit/linux/samba/is_known_pipename` which worked for us previously in `stapler` does not work here because this share is not writeable.
 
-# MySQL at Port 3306
+## MySQL at Port 3306 ##
 * This is the error encountered when we try to connect to the MySQL server, which probably explains why we see `MySQL (unauthorized)` when doing our `nmap` scan earlier.
 ![](/screenshots/lazysysadmin/mysqlAttemptedConnect.jpg)
 * Even after logging in as `togie` from the same network (i.e. `10.0.2.14`), our connection is still prohibited. Hmmm.
 ![](/screenshots/lazysysadmin/mysqlAttemptedConnectTogie.jpg)
 * Nonetheless, we managed to get access to the MySQL database through `phpMyAdmin` (see section on port 80). Hence, accessing port 3306 via an external client is probably disallowed (and it did not matter even if we were connecting from the same network).
 
-# IRC at Port 6667
+## IRC at Port 6667 ##
 * Taking reference from this [article](https://www.hackingtutorials.org/metasploit-tutorials/hacking-unreal-ircd-3-2-8-1/) that I had found, I installed `hexchat` with `apt update && apt install -y hexchat`.
 * Next, after following the instructions to configure and connect, this is what I got:
 ![](/screenshots/lazysysadmin/ircConnect.jpg)
