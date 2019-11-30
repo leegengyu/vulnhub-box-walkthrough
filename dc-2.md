@@ -2,6 +2,7 @@
 [VulnHub link](https://www.vulnhub.com/entry/dc-2,311/)  
 By DCAU
 
+## Enumeration ##
 * As with [DC: 1](https://github.com/leegengyu/CTF-Walkthrough/blob/master/dc-1.md), we are first greeted with a login page that requires users to specify both the username and the password: 
 ![](/screenshots/dc-2/loginInitial.jpg)
 * Common login credentials such as `admin:admin` and `admin:password` do not work.
@@ -13,6 +14,8 @@ By DCAU
 ![](/screenshots/dc-2/hostFullScan.jpg)
 * Looking at the services which the vulnerable VM is running, we can see an Apache httpd web server running on port 80 (which is open), with the `http-title` stating that there is a redirect to `http://dc-2` which it did not follow.
 * There is also an open OpenSSH service running on port 7744 (which is open) which was not detected earlier in the `nmap` scan.
+
+## Exploring Apache httpd Service on Port 80 ##
 * Open `http://10.0.2.7` on our browser and the address is indeed redirected to `http://dc-2`, but the page still fails to load.
 * Note: The `http://` prefix cannot be left out in this case, as compared to our previous attempted vulnerable VMs.
 * To solve this issue, add the entry `10.0.2.7 dc-2` to `/etc/hosts`. The key idea here is that for the page to properly load, the requests must reach the web server at the IP address. Since the IP address redirects us to `http://dc-2` initially, what we have done here is to ensure that the latter resolves to the former during the DNS resolution process.
@@ -45,6 +48,8 @@ By DCAU
 * Note: We can also use `wpscan` to brute-force the respective passwords, though the trade-off is that the latter is only able to brute-force one user's password at a time, as compared to `hydra` which can brute-force multiple users' passwords using the same wordlist.
 * I was curious where jerry and tom's password was located on the WordPress site, and found the former immediately on the `Welcome` page - turns out that it was on the very first line of what greeted us. tom's password is found on the `Our Products` page, in paragraph 4.
 ![](/screenshots/dc-2/wordPressUserjerryPasswordLocation.jpg)
+
+## WordPress Login as Jerry and Tom ##
 * After logging in separately as user `jerry` and `tom`, we find that their accounts are not of the Administrator type, given the limited options we see on the left-hand side toolbar, and also from the `Profile` page:
 ![](/screenshots/dc-2/wordPressUserjerryAndtomProfile.jpg)
 * Navigating the various sections on the left-hand side toolbar reveals no significant information except the `Pages` section, where we see `Flag 2` is located.
@@ -53,6 +58,9 @@ By DCAU
 ![](/screenshots/dc-2/flag2.jpg)
 * From the details of the post, the Page was published, but it probably did not appear on the site (where `Flag 1` did) because it was not inserted on the front page. The URL of the published Page is: `http://dc-2/index.php/flag-2/`.
 * Turns out that we could have just obtained `Flag 2` by modifying the url of `Flag 1`. I immediately tried `/flag-3/`, `/flag-4/`, `/flag-5/` and `/flag-final/` but they were all not found (or at least not viewable as the user `jerry` or `tom`).
+
+## Exploring SSH Service on Port 7744 ##
+### Login as Tom ###
 * We will now explore the other service (SSH) that is also running on the vulnerable VM. Our attempts to login via SSH will use the same set of credentials which we have obtained for the 2 WordPress accounts, since this is the only set of credentials which we have at the moment.
 * Run `ssh [username]@dc-2 -p 7744`.
 * We are able to successfully log in with `tom:parturient`:
@@ -64,6 +72,8 @@ By DCAU
 * Fortunately, the `vi` text editor is available to us, and opening up `flag3.txt` gives us the following:
 ![](/screenshots/dc-2/flag3.jpg)
 * Note: I tried other text editors such as `vim` and `nano` but they were not available.
+
+### Escaping Restricted Shell ###
 * To get out of `rbash`, I executed `:set shell=/bin/sh` and `:shell` within `vi`, as learnt earlier from an OverTheWire Bandit [exercise](https://github.com/leegengyu/OverTheWire-Bandit) at level 25.
 * Note: Setting the shell to `/bin/bash` does not work. Also, `!sh` for the latter command does not work.
 * After getting out of our `rbash`, we find that some commands still do not work, because they are "not found":
@@ -74,6 +84,8 @@ By DCAU
 ![](/screenshots/dc-2/setuidBinaries.jpg)
 * It does not appear that there are any setuid binaries that we can use here.
 * Going back to interpreting `Flag 3`, we find that the hint given is to run `su jerry`, since we are currently `tom`.
+
+### Login as Jerry ###
 * After running the command, we enter jerry's password `adipiscing`, and find that we have successfully logged in as `jerry`:
 ![](/screenshots/dc-2/sshjerryLogin.jpg)
 * Note: I am not exactly sure why we are able to switch to user `jerry` using this method, while we were not able to directly login through SSH as the same user earlier on.
@@ -82,6 +94,8 @@ By DCAU
 * Opening up `flag4.txt`, we find that the hint given is on the very last line - that we have to use `git`.
 * Running `sudo -l`, we try to get a list of commands that we are able to execute (and forbidden from executing) as `root`:
 ![](/screenshots/dc-2/gitCommand.jpg)
+
+### Privilege Escalation (to root) ###
 * From the results of the command, we can see that we are able to run `/usr/bin/git` as `root`, and also without having to know root's password. This finding indeed matches the hint given in Flag 4.
 * Note: Running the `find` command to find setuid binaries for privilege escalation as user `jerry` yields exactly the same results as was observed for user `tom`.
 * Note: I am not sure why `/usr/bin/git` does not turn up in the search results when we use the `find` command to find setuid binaries for privilege escalation.
