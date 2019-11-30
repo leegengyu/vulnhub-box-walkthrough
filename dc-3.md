@@ -2,6 +2,7 @@
 [VulnHub link](https://www.vulnhub.com/entry/dc-3,312/)  
 By DCAU
 
+## Enumeration ##
 * As with DC: 1 and DC: 2, we are first greeted with a login page that requires users to specify both the username and the password:
 ![](/screenshots/dc-3/loginInitial.jpg)
 * Common login credentials such as `admin:admin` and `admin:password` do not work.
@@ -12,6 +13,8 @@ By DCAU
 * Run `nmap -p- -A 10.0.2.8`:
 ![](/screenshots/dc-3/hostFullScan.jpg)
 * Looking at the services which the vulnerable VM is running, we can see an Apache httpd web server running on port 80 (which is open). Also, it appears that the web server is running on a Joomla Content Management System (CMS) instead of WordPress.
+
+## Exploring Apache httpd Service on Port 80 ##
 * Opening `http://10.0.2.8` reveals a site with a welcome post (message) and a login form on the right-hand side:
 ![](/screenshots/dc-3/siteWebServer.jpg)
 * I learnt from another walkthrough that we can identify the CMS behind the site through the header in the page's source, without using any tools at all:
@@ -40,13 +43,16 @@ By DCAU
 ![](/screenshots/dc-3/msfconsoleJoomlaExploitFailed.jpg)
 * This tells us that there are no users logged in at the moment, or at least there are no users which have administrative privileges who are logged in.
 * Next, we will explore 2 steps of using the same vulnerability to obtain our next piece of information.
-* **Method 1: Using Existing Proof-of-Concept Exploit**
+
+## Obtaining Credential Hash Method 1: Existing Proof-of-Concept ##
 * I googled further and found a proof-of-concept exploit for the same vulnerability at this [GitHub link](https://github.com/XiphosResearch/exploits/tree/master/Joomblah).
 * Clone the Git repository, and run `python joomblah.py http://10.0.2.8`:
 ![](/screenshots/dc-3/joomblahOutput.jpg)
 * Within a few seconds, we get to know that the user `admin` exists, along with his password hash `$2y$10$DpfpYjADpejngxNh9GnmCeyIHCWpL97CVRnGeZsVJwR0kWFlfB1Zu`.
 * Note: Reading `joomblah.py` reveals to us a series of steps required by the exploit that the creator has abstracted for us, so all we had to do was to run a simple python command. Such steps include extracting the joomla table, and its users, etc, which we will explore manually executing for ourselves (to a certain extent) in method 2.
-* **Method 2: Using sqlmap**
+
+## Obtaining Credential Hash Method 2: sqlmap ##
+* **Important note-to-self**: This method allows us to explore the use of `sqlmap` as a tool, but OSCP explicitly stated that this specific tool is not allowed on OSCP exams.
 * Alternatively, instead of using the proof-of-concept exploit, `searchsploit 3.7` led us to exploit `42033`, where there is a vulnerable URL given, as well as a command using `sqlmap`.
 * `sqlmap` is an automatic SQL injection tool, allowing us to gain access to information stored in databases using the right set of queries by the tool.
 * Modifying the `sqlmap` to our context gives us: `sqlmap -u "http://10.0.2.8/index.php?option=com_fields&view=fields&layout=modal&list[fullordering]=updatexml" --risk=3 --level=5 --random-agent --dbs -p list[fullordering]`, which when executed shows:
@@ -64,6 +70,8 @@ By DCAU
 * Note: `-T` allows us to specify the DBMS database table(s) to enumerate. `-C` allows us to specify the DBMS database table column(s) to enumerate. `--dump` means to dump the specified DBMS database table entries.
 
 * The hash value in the table is the same as the one that we have found earlier.
+
+## Cracking Credential Hash ##
 * I ran `hash-identifer` against the password hash and interestingly found no results:
 ![](/screenshots/dc-3/hashIdentifierAdmin.jpg)
 * I extracted the front portions of the hash, i.e. `$2y$` and ran a Google search against it. Wikipedia tells us that such a prefix in a hash string indicates that the hash is a "bcrypt hash in modular crypt format".
@@ -78,6 +86,8 @@ By DCAU
 ![](/screenshots/dc-3/hashcatError.jpg)
 * Alternatively, using `john` involves such a command, `john --wordlist=/usr/share/wordlists/rockyou.txt crackThisHash.txt` (which is actually faster than `hashcat`):
 ![](/screenshots/dc-3/john.jpg)
+
+## Logging into Joomla CMS as Admin ##
 * We are now able to log in to `http://10.0.2.8/administrator/`:
 ![](/screenshots/dc-3/loginAdmin.jpg)
 * After logging in, I poked around the articles, categories, modules, plugins, etc. but did not quite seem to find information that was useful to me. This was my first time inside a Joomla CMS administrator panel and I was probably just groping in the dark.
@@ -86,6 +96,8 @@ By DCAU
 * The version that is of note is dated `2019-03-25 04:13:24`, where the boxed-up portions are hints that are not mentioned in the published post:
 ![](/screenshots/dc-3/postWithHints.jpg)
 * On hindsight, the hints may not have been much of a use to us. Hmm.
+
+## Gaining Reverse Shell ##
 * Moving on, I remembered the exploit session which we attempted earlier using `msfconsole` and decided to head back for a shot at it:
 ![](/screenshots/dc-3/msfconsoleJoomlaExploitSuccess.jpg)
 * We were able to establish a meterpreter session this time because we are logged in as `admin`.
@@ -107,7 +119,9 @@ By DCAU
 * We see that the web server is running on `Ubuntu 16.04 LTS`.
 * Run `searchsploit Ubuntu 16.04` to find out if there are any existing exploits for this version of Ubuntu:
 ![](/screenshots/dc-3/searchsploitUbuntu.jpg)
-* We will be using 'double-fdput()' bpf(BPF_PROG_LOAD) Privilege Escalation from the list of available exploits.
+
+## Privilege Escalation (to root) ##
+* We will be using `'double-fdput()' bpf(BPF_PROG_LOAD) Privilege Escalation` from the list of available exploits.
 * Run `cat /usr/share/exploitdb/exploits/linux/local/39772.txt` to see the details of the exploit.
 * Download the .zip file for this exploit from [this GitHub link](https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/39772.zip) on the `/tmp` directory of the vulnerable web server.
 * Run `unzip 39772.zip` to unzip the file, and we find `crasher.tar` and `exploit.tar`. At this point we are not exactly sure how we should be handling the files so I referred back to 39772.txt on how the files should be used:
