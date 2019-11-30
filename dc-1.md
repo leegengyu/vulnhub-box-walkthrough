@@ -2,6 +2,7 @@
 [VulnHub link](https://www.vulnhub.com/entry/dc-1,292/)  
 By DCAU
 
+## Enumeration ##
 * As with [Mr-Robot: 1](https://github.com/leegengyu/CTF-Walkthrough/blob/master/mr-robot-1.md), we are first greeted with a login page that requires users to specify both the username and the password: 
 ![](/screenshots/dc-1/LoginInitial.jpg)
 * Common login credentials such as `admin:admin` and `admin:password` do not work.
@@ -13,6 +14,8 @@ By DCAU
 ![](/screenshots/dc-1/hostFullScan.jpg)
 * Looking at the services which the vulnerable VM is running, there is an Apache httpd web server running on port 80, with the website being run by a `Drupal CMS`.
 * Moreover, there appears to be a long list of results from the `robots.txt` file as well.
+
+## Exploring Apache httpd Service on Port 80 ##
 * Open `10.0.2.7` on our browser and we have the welcome page greeting us with a login panel on the left-hand side:
 ![](/screenshots/dc-1/SiteWebServer.jpg)
 * Common login credentials such as `admin:admin` and `admin:password` do not work.
@@ -37,6 +40,8 @@ By DCAU
 * Run `droopescan scan drupal -u http://10.0.2.7`:
 ![](/screenshots/dc-1/droopescanResult.jpg)
 * We can see that the possible versions of the Drupal CMS is narrowed down to 7.22 - 7.26, though we do not have an exact hit.
+
+## Gaining Reverse Shell ##
 * Running `msfconsole`, I searched for modules pertaining to Drupal: `search drupal`:
 ![](/screenshots/dc-1/msfconsoleSearchResults.jpg)
 * We can either `use exploit/multi/http/drupal_drupageddon` or `use exploit/unix/webapp/drupal_drupalgeddon2`.
@@ -54,6 +59,8 @@ By DCAU
 * We will next be finding a list of binaries that have the setuid bit enabled on the vulnerable VM: run `find / -user root -perm -4000 -print 2>/dev/null`.
 ![](/screenshots/dc-1/suidExecutables.jpg)
 * Out of all the binaries returned as part of our `find` command, we will be using `/usr/bin/find`.
+
+## Privilege Escalation (to root) ##
 * Normally, we will use the `find` command to search for files, but we will not be specifying any file names in our command (and it will not throw out the entire list of available files as well). Instead, we will use the `-exec` parameter, which will execute the command to spawn a shell, which turns out to give us `root`.
 * Run `find -exec "/bin/sh" \;`:
 ![](/screenshots/dc-1/findCommandPrivilegeEscalation.jpg)
