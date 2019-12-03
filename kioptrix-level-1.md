@@ -71,7 +71,7 @@ By Kioptrix
 
 ### trans2open Overflow (Metasploit) ###
 * The [second Google search](https://www.exploit-db.com/exploits/7) result shows that the Samba version is also susceptible to a `Remote Buffer Overflow`, specifically a trans2open overflow. [A Rapid7 entry](https://www.rapid7.com/db/modules/exploit/linux/samba/trans2open) shows that there is a Metasploit module available pertaining to it for our use.
-* According to [a cvedetails page], the name of the exploit is due to a "buffer overflow in the call_trans2open function in trans2.c".
+* According to [a cvedetails page for this exploit](https://www.cvedetails.com/cve/CVE-2003-0201/), the name of the exploit is due to a "buffer overflow in the call_trans2open function in trans2.c".
 * **Question**: Not exactly sure why the Perl script from the Exploit-DB page does not result in any shell despite running for around 10 minutes. My executed command was `perl 7.pl -t linx86 -H 10.0.2.6 -h 10.0.2.12`.
 * Searching with the keyword `trans2open` after running `msfconsole` gives us 4 results, with each being applicable to only the respective OSes. We will be using the one for `Linux x86` (**where did we get this piece of information? i.e. how do we know we should be using Linux?**)
 ![](/screenshots/kioptrix-level-1/metasploitTrans2openModules.jpg)
