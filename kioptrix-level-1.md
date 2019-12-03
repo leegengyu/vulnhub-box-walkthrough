@@ -63,6 +63,8 @@ By Kioptrix
 ![](/screenshots/kioptrix-level-1/smbFolderNoFinding.jpg)
 * I was also thinking that the error when trying to map shares during the `enum4linux` scan explains why the latter 2 commands failed.
 * At this point, I wasn't quite sure what else to make of the results from above, especially the output from `enum4linux`, since I was trying out to make a headway based on the limited experience from encountering this service in 2 previous machines - `lazysysadmin` and `stapler`. The exploit used in the latter machine would not work here because we do not have a writeable SMB share (I could not even find a readable one).
+* **Re-visit**: Tried an `anonymous` login to IPC$ share using `smbclient //10.0.2.12/IPC$ -N`, and was successful. However, I could not list or write any items in the current workng directory.
+![](/screenshots/kioptrix-level-1/smbclientAttempt.jpg)
 
 # Concluding Remarks
 2 hints obtained on the way to getting a root shell (in some way):
