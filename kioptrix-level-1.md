@@ -57,13 +57,22 @@ By Kioptrix
 * The above exploit was one of those that abatchy tried (but did not find working in this machine's instance), as seen in [his blog post on the same vulnerable machine](https://www.abatchy.com/2016/11/kioptrix-1-walkthrough-vulnhub).
 
 ## Samba Smbd Service at Port 139 ##
-* Running `enum4linux 10.0.2.12` quickly gave us a long list of results. We see `KIOPTRIX Wk Sv PrQ Unx NT SNT Samba Server` under the `OS Information` section, with OS version `4.5` running. We also note the Share Enumeration results, where there are errors encountered when trying to "map shares". There was also a list of results for users and groups.
+* Running `enum4linux 10.0.2.12` quickly gave us a long list of results. We see `KIOPTRIX Wk Sv PrQ Unx NT SNT Samba Server` under the `OS Information` section, with OS version `4.5` running.
+![](/screenshots/kioptrix-level-1/enum4linuxOsInformation.jpg)
+* **Re-visit/Question**: I read from kongwenbin's write-up that running the command should give us the OS information for the smbclient as well. Notice that ours is left blank as shown above. Crucially, it reveals that the Samba version is `2.2.1a`, and not 4.5 as what we thought!
+* Given this crucial piece of information, the first Google search result for `samba 2.2.1a exploit` was able to give me a `root` shell easily.
+![](/screenshots/kioptrix-level-1/sambaExploitGoogleSearch.jpg)
+* After downloading and compiling the code (`gcc 10.c`), run `./a.out -b 0 10.0.2.12`:
+![](/screenshots/kioptrix-level-1/sambaRemoteRootExploit.jpg)
+* Note: The `-b` parameter indicates the platform: `0 = Linux, 1 = FreeBSD/NetBSD, 2 = OpenBSD 3.1 and prior, 3 = OpenBSD 3.2`. Choosing any of the numbers except 3 would result in a `root` shell.
+* Note: Running `exit` seems to be a little buggy for me, i.e. the shell does not terminate immediately.
+* We also note the Share Enumeration results, where there are errors encountered when trying to "map shares". There was also a list of results for users and groups.
 * Running `smbmap -H 10.0.2.12` shows a single line of output, `[+] Finding open SMB ports....`, before the program terminates. Judging this against from what we see in `lazysysadmin`, the Kioptrix has only got one port (on 139) with the `netbios-ssn` service, as compared to the latter which has 2 ports (on 139 and 445), which probably explains the non-discovery of open SMB ports in this instance (I think).
 * Accessing `smb://10.0.2.12/` using the Kali Linux file explorer shows nothing. I had expected `IPC$` and `ADMIN$` to be showing up at least, as seen on `lazysysadmin`. However, in hindsight, since they were not found using `smbmap`, that could be the reason why we are not seeing them this way as well.
 ![](/screenshots/kioptrix-level-1/smbFolderNoFinding.jpg)
 * I was also thinking that the error when trying to map shares during the `enum4linux` scan explains why the latter 2 commands failed.
 * At this point, I wasn't quite sure what else to make of the results from above, especially the output from `enum4linux`, since I was trying out to make a headway based on the limited experience from encountering this service in 2 previous machines - `lazysysadmin` and `stapler`. The exploit used in the latter machine would not work here because we do not have a writeable SMB share (I could not even find a readable one).
-* **Re-visit**: Tried an `anonymous` login to IPC$ share using `smbclient //10.0.2.12/IPC$ -N`, and was successful. However, I could not list or write any items in the current workng directory.
+* **Re-visit**: Tried an `anonymous` login to IPC$ share using `smbclient //10.0.2.12/IPC$ -N`, and was successful. However, I could not list or write any items in the current working directory.
 ![](/screenshots/kioptrix-level-1/smbclientAttempt.jpg)
 
 # Concluding Remarks
