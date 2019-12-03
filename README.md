@@ -1,5 +1,5 @@
-# Vulnhub-Box-Walkthrough
-* This repository contains a list of vulnerable virtual machines from Vulnhub which I have attempted, as part of my preparation for the OSCP exam.
+# VulnHub-Box-Walkthrough
+* This repository contains a list of vulnerable virtual machines from VulnHub which I have attempted, as part of my preparation for the OSCP exam.
 * The list is ordered in chronological order, starting with the earliest ones that I tried.
 * Entries that are marked with **[S]** are considered to be similar to OSCP, based on this [spreadsheet](https://docs.google.com/spreadsheets/d/1dwSMIAPIam0PuRBkCiDI88pU3yzrqqHkDtBngUHNCw8).
 
@@ -18,3 +18,8 @@
 13. Mission-Pumpkin v1.0: PumpkinGarden (Jayanth)
 14. Mission-Pumpkin v1.0: PumpkinRaising (Jayanth)
 15. Mission-Pumpkin v1.0: PumpkinFestival (Jayanth) [on-hold]
+16. Kioptrix: Level 1 (#1) **[S]**
+17. Kioptrix: Level 1.1 (#2) **[S]**
+
+## Important Milestones
+* 6 May 2019: First commit to this repository (started working on my first machine)
