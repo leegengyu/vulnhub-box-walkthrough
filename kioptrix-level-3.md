@@ -76,6 +76,7 @@ By Kioptrix
 ![](/screenshots/kioptrix-level-3/httpGalleryGalleryPhp.jpg)
 * It looks like we may have hit jackpot here!
 
+### SQL Injection in Gallery Page ###
 * Searching for `gallarific exploit` on Google was most helpful, with the first result pointing us to [an Exploit-DB page](https://www.exploit-db.com/exploits/15891) that was titled `GALLARIFIC PHP Photo Gallery Script - 'gallery.php' SQL Injection`.
 * Examining the 2 links provided, we note that the SQL injection is done exactly at the pages where we found the SQL error messages.
 * First, let us try `/gallery.php?id=null` first, which says `Empty Gallery` and `No photos have been uploaded. Go back.`.
@@ -92,6 +93,7 @@ By Kioptrix
 * Side-track: I was so happy at the page finally not giving an error because I was trying really hard to find a solution to this without referring to a walkthrough. I have yet to learn about databases in depth, and looking at the long SQL injection string gave me a lot of questions as well.
 * Side-note: While trying to understand the SQL string, I did not know what `0x3a` stood for (though I could have used a hexadecmial-to-ASCII converter but I wanted more context), and found [this StackOverflow post](https://stackoverflow.com/questions/4042825/explanation-of-particular-sql-injection) that explained things nicely. It represents a colon (`:`).
 
+### Logging into Gallarific Admin Panel ###
 * The set of credentials which we had obtained from the SQL injection is `admin:n0t7t1k4`. Tried it on `http://10.0.2.15/index.php?system=Admin` and `http://10.0.2.15/phpmyadmin/`, but both failed to log us in. Finally, I tried it on `http://10.0.2.15/gallery/gadmin/` and we are in!
 ![](/screenshots/kioptrix-level-3/httpGalleryGadminLoginSuccess.jpg)
 * The `Comments` system is disabled, as shown from the missing `/comments.php` when trying to `View comments` from the `Dashboard`.
