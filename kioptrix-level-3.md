@@ -33,6 +33,8 @@ By Kioptrix
 * I tried 3 hydra bruteforce attempts in total: `hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.0.2.15 http-form-post '/index.php?system=Admin&page=loginSubmit:username=^USER^&password=^PASS^:username or password'`. First was with the failure string `incorrect`, which turned out to be a wrong one to look out for because there was another error string that I left out. For an invalid set of login credentials, the error message was `Incorrect username or password.`. For an empty field in either of the username or password, the error message was `Username or password left blank.`. After getting the failure string right, I tried brute-forcing for user `loneferret`. All of these 3 attempts came up to nothing.
 * Next, I searched for version=specific exploits and found `LotusCMS 3.0 eval() Remote Command Execution`, which has a Metasploit module for it (its Rapid7 page is found [here](https://www.rapid7.com/db/modules/exploit/multi/http/lcms_php_exec)). I was not sure what version of LotusCMS we were facing here, but a shot at it reveals that it does not work in our case:
 ![](/screenshots/kioptrix-level-3/metasploitLotusCms3.0AttemptFail.jpg)
+
+### NEW: Gsining Reverse Shell (Low Privilege) ###
 * **Re-visit**: I spent a day and a half on this machine and still could not get a (low privilege) shell, and decided to look for a hint - and realised that I was actually looking at the correct exploit - but had run it incorrectly! Sigh - somehow I overlooked this several times. The `URI` should have been `/index.php?system=Admin`:
 ![](/screenshots/kioptrix-level-3/metasploitLotusCms3.0ExploitShell.jpg)
 * Finally, we have now got a shell with ourselves as `www-data`.
@@ -45,11 +47,40 @@ By Kioptrix
 * After downloading the script, give it executable permissions, and run it. This was the most interactive script that I've seen (note: the IP and port that it is referring to that of the Kali VM).
 ![](/screenshots/kioptrix-level-3/shellUsingGithubScript.jpg)
 * The netcat shell is a lot more stable now - run `python -c 'import pty; pty.spawn("/bin/bash")'` to get our interactive TTY shell.
-* Trying a couple of kernel exploits here, but none currently work at the moment:
-1. 33322.c : buf: 0xffffffff Segmentation fault
-2. 9083.c 64-bits only
-3. 40812.c #include "exp_framework.h" missing
+
+### NEW: Exploring Files & Directories ###
+* Trying a couple of kernel exploits here, but none currently work at the moment. This includes `Linux Kernel 2.6.x - 'pipe.c' Local Privilege Escalation (2)` ([33322.c](https://www.exploit-db.com/exploits/33322)), which gives us an error message `buf: 0xffffffff Segmentation fault` during runtime.
 * Note: I could not use `wget` to download Exploit-DB's code straight, due to SSL errors. Using `vim` in the shell session established was also problematic - the first line of the code seemed to always be missing. Hence, the best way was to use `wget` to download the code from our Kali machine and compile it on the vulnerablle machine itself.
+* Next I ran `linuxprivchecker.py` and had a long list of results, including one of them that could work if we could run `sudo -l` successfully (found [here](https://github.com/t0kx/privesc-CVE-2010-0426)). We could not do so at the moment, so we'll keep it in mind for the time being.
+* Looking around the `/home` directory of the web server, we find a hash `318d8dd409db395f0317efa71b3bad13e1fb9857` in `admin.dat`, belonging to the `administrator`. However, it seems that no one was able to crack it (there is a `hash.dat` in another directory which is probably required together to crack it, I guess).
+![](/screenshots/kioptrix-level-3/shellWebServerAdminDat.jpg)
+* We also find in `loneferret`'s home directory a `CompanyPolicy.README` that states to use `sudo ht`. Again, we are unable to run it for the time being because we do not have any credentials yet.
+![](/screenshots/kioptrix-level-3/shellLoneFerretCompanyPolicy.jpg)
+
+### NEW: Obtaining phpMyAdmin Credentials ###
+* I learnt that we were able to run `find . -name '*.php' | grep config` to find config files, "maybe we can get some interesting hardcoded information from them".
+* `./gallery/gconfig.php` turned up as one of the results:
+![](/screenshots/kioptrix-level-3/shellGalleryGconfigPhpMyAdminCredentials.jpg)
+* It turns out that these are credentials to `phpMyAdmin` - `root:fuckeyou`!
+* Note-to-self: I have been having the misconception that the phpMyAdmin database only served the main section of the page - and for subpages such as gallery, it was served by another database.
+* Note: The password is **not found in rockyou.txt**, and thus brute-force would not have worked.
+
+### NEW: Obtaining 2 Sets of Credentials through phpMyAdmin ###
+* After logging into `phpMyAdmin`:
+![](/screenshots/kioptrix-level-3/phpMyAdminLoggedIn.jpg)
+* Looking around, we are able to find 2 account's hashes in the `dev_accounts` table under the `gallery` database: `0d3eccfb887aabd50f243b3f155c0f85` for `dreg` and `5badcaf789d3d1d09794d8f021f40f0e` for `loneferret`.
+![](/screenshots/kioptrix-level-3/phpMyAdminDevAccountsTable.jpg)
+* Using `hash-identifier`, we find out that both of these password hashes are of `MD5` type.
+* Next, using [hashkiller](https://hashkiller.co.uk/Cracker/MD5), we are able to crack the hashes and obtain the following set of credentials: `dreg:Mast3r` and `loneferret:starwars`.
+* Note: The 2 passwords were **found in rockyou.txt** - I guess brute-forcing for their credentials was the right thing to do, but I did not leave it to run for a long-enough time.
+
+### NEW: Logging into SSH as loneferret ###
+* Logging in with the credentials `loneferret:starwars`:
+![](/screenshots/kioptrix-level-3/sshLoginAsLoneferret.jpg)
+* Tried running the exploit that we found regarding `sudoedit` earlier here, but got the error message`Sorry, user loneferret is not allowed to execute './sudoedit CompanyPolicy.README' as root on Kioptrix3.`
+* `sudo -l` gives us 2 results: `!/usr/bin/su` and `/usr/local/bin/ht`. However, I was encountering the error message `Error opening terminal: xterm-256color.` for the latter command.
+![](/screenshots/kioptrix-level-3/sshLoneferretSudoDashL.jpg)
+* To-be-continued...
 
 ### Discovering More Pages/Directories ###
 * No `robots.txt` file was found.
@@ -157,8 +188,12 @@ I could not manage to get Burp Suite to intercept both the request and response 
 * After confirming that `loneferret` has an account, I decided to brute-force with the `rockyou.txt` wordlist, but after running it for a few thousands tries for half an hour, I don't think it worked out.
 
 # Concluding Remarks
-
+1. Learnt how to properly understand the Metasploit/non-Metasploit exploit that I was using, and its importance.
+2. Learnt to find important files (such as config files) with an unfamiliar CMS.
+3. [To-do] Learnt how to optimise SSH bruteforcing.
+4. To-be-added
 
 # Other Walkthrough References
 1. https://kongwenbin.wordpress.com/2016/10/30/writeup-for-kioptrix-level-1-2-3/
 2. https://medium.com/@Kan1shka9/kioptrix-level-1-2-walkthrough-74753598a6fd
+3. https://xapax.github.io/blog/2016/09/04/kioptrix3-walkthrough.html
