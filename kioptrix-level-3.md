@@ -44,14 +44,14 @@ By Kioptrix
 
 ### phpMyAdmin Exploration ###
 * Loading `/phpmyadmin` gives us a login page that appears to expose the version of the SQL server running - `phpMyAdmin 2.11.3deb1ubuntu1.3`:
-![](/screenshots/kioptrix-level-3/phpMyAdminLoginPage.jpg)
+![](/screenshots/kioptrix-level-3/httpPhpMyAdminLoginPage.jpg)
 * Searching for version-specific exploits, I found the `phpMyAdmin - '/scripts/setup.php' PHP Code Injection`, whose Exploit-DB link is [here](https://www.exploit-db.com/exploits/8921). However, one of the requirements are not met because the `/config/` directory was not found to exist.
 * I tried SQL injection on the login fields as well: `' or 1=1 --` and `' or '1=1' --`, but to no avail. These attempts (along with ones with invalid login credentials) lead to a `access denied`.
 * There was nothing much discovered in the page source as well.
 * Running `nikto -h 10.0.2.15` reveals undiscovered phpMyAdmin pages:
 ![](/screenshots/kioptrix-level-3/niktoScan.jpg)
 * These 2 pages confirm that the version of phpMyAdmin that we found earlier is most likely what it is, based on the related pages discovered:
-![](/screenshots/kioptrix-level-3/phpMyAdminVersionConfirmation.jpg)
+![](/screenshots/kioptrix-level-3/httpPhpMyAdminVersionConfirmation.jpg)
 * At this point, I had exhausted where my enumeration and decided to finally edit our `/etc/hosts` file (as mentioned earlier). I did not do this earlier because I was in the midst of my `hydra` attempts and did not want to interrupt them.
 * Side-note: The fact that this mapping was explictly mentioned in the VulnHub page probably highlighted its importance (which is indeed the case as we see later) - but nonetheless, we won't be having any of such explicit mentions in our OSCP exam.
 
