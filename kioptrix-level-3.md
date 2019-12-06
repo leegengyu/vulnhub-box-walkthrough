@@ -35,7 +35,9 @@ By Kioptrix
 ![](/screenshots/kioptrix-level-3/metasploitLotusCms3.0AttemptFail.jpg)
 
 ### NEW: Gsining Reverse Shell (Low Privilege) ###
-* **Re-visit**: I spent a day and a half on this machine and still could not get a (low privilege) shell, and decided to look for a hint - and realised that I was actually looking at the correct exploit - but had run it incorrectly! Sigh - somehow I overlooked this several times. The `URI` should have been `/index.php?system=Admin`:
+* **Re-visit**: I spent a day and a half on this machine and still could not get a (low privilege) shell, and decided to look for a hint - and realised that I was actually looking at the correct exploit - but had run it incorrectly!
+* The exploit is based off a "vulnerability found in Lotus CMS 3.0's Router() function.  This is done by embedding PHP code in the 'page' parameter, which will be passed to a eval call, therefore allowing remote code execution."
+* Sigh - somehow I overlooked this several times. The `URI` should have been `/index.php?system=Admin`:
 ![](/screenshots/kioptrix-level-3/metasploitLotusCms3.0ExploitShell.jpg)
 * Finally, we have now got a shell with ourselves as `www-data`.
 * Note: I had also used the `php/reverse_php` payload instead of the original meterpreter payload because I did not require the other additional features that it gave (and also lack of familiarity at the moment with the syntax).
@@ -44,8 +46,12 @@ By Kioptrix
 * Since the shell returned using Metasploit wasn't stable enough for me, I decided to try out the [second Google result shown](https://github.com/Hood3dRob1n/LotusCMS-Exploit) (when searching for a version-related exploit) - which is a GitHub script.
 * Note-to-self: Maybe I should try such results, just in case I got the Metasploit attempt wrong (again).
 * Fun fact: If I had visited the script, one of the examples (which had `kioptrix3` in it) would have been a giveaway that this exploit should be used.
-* After downloading the script, give it executable permissions, and run it. This was the most interactive script that I've seen (note: the IP and port that it is referring to that of the Kali VM).
+* Reading the script code, we are able to manually test that the vulnerability exists by running this page in our browser `http://kioptrix3.com/index.php?page=index%27)%3B%24{print(%27ThisStringIsNowPrinted%27)}%3B%23`. The string `ThisStringIsNowPrinted` is printed as part of the page if the vulnerability exists:
+![](/screenshots/kioptrix-level-3/httpLotusCMSVulnerabilityManualVerification.jpg)
+* After downloading the script, give it executable permissions, and run it. This was the most interactive script that I've seen.
 ![](/screenshots/kioptrix-level-3/shellUsingGithubScript.jpg)
+* Note: The command to run the script is `./lotusRCE.sh kioptrix3.com /`. For the last parameter, we do not have to specify the URI that we see in our Metasploit example above because it is hardcoded into the source code itself.
+* Note: The IP and port that we see in the screenshot refers to that of the Kali VM.
 * The netcat shell is a lot more stable now - run `python -c 'import pty; pty.spawn("/bin/bash")'` to get our interactive TTY shell.
 
 ### NEW: Exploring Files & Directories ###
@@ -78,9 +84,33 @@ By Kioptrix
 * Logging in with the credentials `loneferret:starwars`:
 ![](/screenshots/kioptrix-level-3/sshLoginAsLoneferret.jpg)
 * Tried running the exploit that we found regarding `sudoedit` earlier here, but got the error message`Sorry, user loneferret is not allowed to execute './sudoedit CompanyPolicy.README' as root on Kioptrix3.`
-* `sudo -l` gives us 2 results: `!/usr/bin/su` and `/usr/local/bin/ht`. However, I was encountering the error message `Error opening terminal: xterm-256color.` for the latter command.
+* `sudo -l` gives us 2 results: `!/usr/bin/su` and `/usr/local/bin/ht`. However, I was encountering the error message `Error opening terminal: xterm-256color.` for the latter command. Run `export TERM=xterm` to resolve this issue.
 ![](/screenshots/kioptrix-level-3/sshLoneferretSudoDashL.jpg)
-* To-be-continued...
+* I retried `sudo /usr/local/bin/ht CompanyPolicy.README`, and find ourselves in an editor that we have never seen before:
+![](/screenshots/kioptrix-level-3/sshBinHtEditFile.jpg)
+* Searching on Google Images with the keywords `bin ht editor` confirms that it is what we think it is - since it was something that I had never come across before.
+* I was able to edit files, but only through specifying hexadecimal characters instead of ASCII ones. I was able to toggle between these 2 modes, but could not find the option to `edit` when in `text` mode. 
+* I wanted to see if there was an easier way around this, and looked at the other command when running `sudo -l`. This was the first time that I encountered a command indicated in the file with the `!/` prefix. Removing these 2 character prefixes, we were not able to find `/usr/bin/su` on the system. The `su` binary which was executed when we run `sudo su` is `/bin/su` instead. No luck here I guess.
+* Seeing `/etc/passwd`, user `dreg` would start off in a `rbash`, which be a worse-off position than we are at right now.
+* I went back to the HT Editor and went into `Help`, where I fortunately found that including `--text` into the command allowed us to edit the file in `text` mode, just like a normal text editor.
+* I went into `/etc/passwd` and `/etc/shadow` to remove `root`'s password, and got reminded that we are "not allowed to execute '/bin/su' as root on Kioptrix3".
+* The hash for `root` is `$1$QAKvVJey$6rRkAMGKq1u62yfDaenUr1`.
+
+### Privilege Escalation Method 1 - Editing /etc/crontab ###
+* So I went with the method in `dc-4`: I opened up `/etc/crontab` and included a new entry `* * * * * root chmod 4777 /bin/sh`. Run `ls -al /bin/sh` to confirm that its permissions are now chanaged.
+* Afterwards, simply run `/bin/sh`:
+![](/screenshots/kioptrix-level-3/shellPrivEscThroughCronTab.jpg)
+* **Note-to-self and to-do**: We have to find out if getting `euid` as `root` counts as a successful privilege escalation, because what we normally want/expect is `root` for `uid`.
+
+### Privilege Escalation Method 2 - Editing /etc/sudoers ###
+* Another method I learnt from kongwenbin was that we could escalate our privileges by editing the `/etc/sudoers` file - which determined the permissions that we saw when we executed `sudo -l`. This is the original file contents upon opening it:
+![](/screenshots/kioptrix-level-3/shellEtcSudoersOriginalFile.jpg)
+* Replace `loneferret`'s permissions with that of `root`, and then `sudo -l` to check that it has been changed, and run `sudo su`:
+![](/screenshots/kioptrix-level-3/shellPrivEscThroughSudoers.jpg)
+* And here is what we find `root`'s directory:
+![](/screenshots/kioptrix-level-3/shellRootDirectoryCongratsTxt.jpg)
+* Alternatively, we can "add /bin/bash so that we can run our bash shell as root." After saving the file, just run `sudo /bin/bash`.
+* This method was done across 2 previous machines - I had forgotten about this method probably because they were attempted about half a year back, and I had yet to create a list for my own methodology (as I should, soon).
 
 ### Discovering More Pages/Directories ###
 * No `robots.txt` file was found.
@@ -191,7 +221,7 @@ I could not manage to get Burp Suite to intercept both the request and response 
 1. Learnt how to properly understand the Metasploit/non-Metasploit exploit that I was using, and its importance.
 2. Learnt to find important files (such as config files) with an unfamiliar CMS.
 3. [To-do] Learnt how to optimise SSH bruteforcing.
-4. To-be-added
+4. Learnt that phpMyAdmin and MySQL versions are different - "PHPMyAdmin is a (web application) client for MySQL."
 
 # Other Walkthrough References
 1. https://kongwenbin.wordpress.com/2016/10/30/writeup-for-kioptrix-level-1-2-3/
