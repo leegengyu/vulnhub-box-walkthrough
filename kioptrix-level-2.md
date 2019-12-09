@@ -5,14 +5,17 @@ By Kioptrix
 ## Setting Up the Box ##
 * The updated version, i.e. second release of the box is the one used here (and not the original release).
 * The solution provided in kioptrix-level-1 to set up the box works for this one as well.
+* After implementing the solutions, we come across 3 dialog boxes that ask us about some settings when booting up the vulnerable machine, to which I just selected the right-most `Do Nothing` choice.
 
 ## Enumeration ##
 * We are first greeted with a login page that requires users to specify a set of credentials:
 ![](/screenshots/kioptrix-level-2/loginInitial.jpg)
-* Run `nmap 10.0.2.*`, where we find `10.0.2.15` to be the IP address of the vulnerable machine. 6 services were also discovered, where they are all in an Open state.
+* Run `nmap -T5 10.0.2.*`, where we find `10.0.2.15` to be the IP address of the vulnerable machine. 6 services were also discovered, where they are all in an Open state.
 ![](/screenshots/kioptrix-level-2/nmapScan.jpg)
-* Run `nmap -sC -sV 10.0.2.15` to enumerate the running services:
+* Note: This screenshot was updated during a re-visit of the machine.
+* Run `nmap -sC -sV -T5 -p- 10.0.2.15` to enumerate the running services:
 ![](/screenshots/kioptrix-level-2/hostFullScan.jpg)
+* Note: This screenshot was updated during a re-visit of the machine.
 * Let us start with the Apache httpd service at port 80.
 
 ## Apache httpd service at Port 80 ##
@@ -74,7 +77,7 @@ it did not work - there were 404s for all of the pages attempted. Wanted to find
 * Tried to login as `root` - nothing special here (no banners or whatsover).
 ![](/screenshots/kioptrix-level-2/sshLoginAttemptRoot.jpg)
 
-## Apache HTTPS service at Port 80 ##
+## Apache HTTPS service at Port 443 ##
 * We add the site as a security exception as usual, and find the same site as was discovered in Port 80.
 
 ## MySQL service at Port 3306 ##
