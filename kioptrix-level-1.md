@@ -11,8 +11,9 @@ By Kioptrix
 ![](/screenshots/kioptrix-level-1/loginInitial.jpg)
 * Run `nmap 10.0.2.*`, where we find `10.0.2.12` to be the IP address of the vulnerable machine. 6 services were also discovered, where they are all in an Open state.
 ![](/screenshots/kioptrix-level-1/nmapScan.jpg)
-* Run `nmap -sC -sV 10.0.2.12` to enumerate the running services:
+* Run `nmap -sC -sV -T5 -p- 10.0.2.12` to enumerate the running services:
 ![](/screenshots/kioptrix-level-1/hostFullScan.jpg)
+* Note: This screenshot was updated during a re-visit of the machine.
 * As this machine is relatively much older than all of the challenges we had done so far, we are seeing the versions of the services running being much older (and thus I am also guessing that it will be easier to find exploits specific to these versions?).
 * Let us start with the Apache httpd service at port 80.
 
@@ -57,12 +58,25 @@ By Kioptrix
 * The above exploit was one of those that abatchy tried (but did not find working in this machine's instance), as seen in [his blog post on the same vulnerable machine](https://www.abatchy.com/2016/11/kioptrix-1-walkthrough-vulnhub).
 
 ## Samba Smbd Service at Port 139 ##
-
-### Remote Root Exploit (Non-Metasploit) ###
+### Enumerating Service Information ###
 * Running `enum4linux 10.0.2.12` quickly gave us a long list of results. We see `KIOPTRIX Wk Sv PrQ Unx NT SNT Samba Server` under the `OS Information` section, with OS version `4.5` running.
 ![](/screenshots/kioptrix-level-1/enum4linuxOsInformation.jpg)
-* **Re-visit/Question**: I read from kongwenbin's write-up that running the command should give us the OS information for the smbclient as well. Notice that ours is left blank as shown above. Crucially, it reveals that the Samba version is `2.2.1a`, and not 4.5 as what we thought!
-* Given this crucial piece of information, the [first Google search result](https://www.exploit-db.com/exploits/10) (which is from Exploit-DB) for `samba 2.2.1a exploit` was able to give me a `root` shell easily - `Remote Code Execution`:
+* **Re-visit**: I read from kongwenbin's write-up that running the command should give us the OS information for the smbclient as well. Notice that ours is left blank as shown above. Crucially, it reveals that the Samba version is `2.2.1a`, and not 4.5 as what we thought!
+* After re-searching on this issue, I found out that it has been an unresolved one, with an [issue open on the enum4linux GitHub repository](https://github.com/portcullislabs/enum4linux/issues/5), and a [closed issue in Kali Bug Tracker](https://bugs.kali.org/view.php?id=4495), whose solution I did not attempt because it did not feel right. There is [a post on the OSCP forums](https://forums.offensive-security.com/showthread.php?22241) about this - with several options to replace the particular malfunction feature of enum4linux (or even the tool itself altogether):
+1. Use a Metasploit module (found [here](https://www.offensive-security.com/metasploit-unleashed/scanner-smb-auxiliary-modules/)) - `msfconsole`, `use auxiliary/scanner/smb/smb_version`, `set RHOSTS 10.0.2.12` and finally `run`:
+![](/screenshots/kioptrix-level-1/metasploitModuleSmbVersion.jpg)
+* **Question**: I am not too sure why it says `Host could not be identified`, although the output was correct and instantaneous.
+2. Use a [bash script](https://0xdf.gitlab.io/2018/12/02/pwk-notes-smb-enumeration-checklist-update1.html)
+3. Use a [dedicated Python script](https://github.com/amitn322/smb-version) just for getting the version of Samba server
+4. Use a [ported Python-equivalent script](https://github.com/0v3rride/Enum4LinuxPy) (that was ported over from the original Perl version)
+
+### 2 Avenues to Obtain Root Shell Through BoF Vulnerability ###
+* There are 2 general avenues to get a `root` shell in this section, one through a Metasploit module, and the other through non-Metasploit methods. There are multiple POCs available for the latter, especially as seen in the [exploit's section of the remote buffer overflow vulnerability that is used](https://www.securityfocus.com/bid/7294/exploit).
+* Note: Those links listed in the page no longer work (for me at least).
+* Note-to-self: When in doubt if POCs are using the same vulnerability, use the CVE listed as one of the ways to determine. I was confused initially because of the naming of the exploit that made me mistake that there were more than 1 vulnerability here that could get us a `root` shell.
+
+### trans2open Overflow (Non-Metasploit) ###
+* With the Samba version obtained, our [first Google search result](https://www.exploit-db.com/exploits/10) (which is from Exploit-DB) for `samba 2.2.1a exploit` was able to give us a `root` shell easily - through a `Remote Code Execution`:
 ![](/screenshots/kioptrix-level-1/sambaExploitGoogleSearch.jpg)
 * After downloading and compiling the code (`gcc 10.c`), run `./a.out -b 0 10.0.2.12`:
 ![](/screenshots/kioptrix-level-1/sambaRemoteRootExploit.jpg)
@@ -81,7 +95,7 @@ By Kioptrix
 * Changing the payload would solve the issue: `set payload generic/shell_reverse_tcp`. Run `exploit` next to get a `root` shell:
 ![](/screenshots/kioptrix-level-1/metasploitReverseShell.jpg)
 
-### Other Attempts ###
+### Other Attempts for Samba Service ###
 * The Share Enumeration results from `enum4linux` was also noted, where there are errors encountered when trying to "map shares". There was also a list of results for users and groups.
 * Running `smbmap -H 10.0.2.12` shows a single line of output, `[+] Finding open SMB ports....`, before the program terminates. Judging this against from what we see in `lazysysadmin`, the Kioptrix has only got one port (on 139) with the `netbios-ssn` service, as compared to the latter which has 2 ports (on 139 and 445), which probably explains the non-discovery of open SMB ports in this instance (I think).
 * Accessing `smb://10.0.2.12/` using the Kali Linux file explorer shows nothing. I had expected `IPC$` and `ADMIN$` to be showing up at least, as seen on `lazysysadmin`. However, in hindsight, since they were not found using `smbmap`, that could be the reason why we are not seeing them this way as well.
@@ -103,3 +117,4 @@ I wanted to work on this box as one of the first few boxes to start my journey t
 
 # Other Walkthrough References
 1. https://kongwenbin.wordpress.com/2016/10/25/writeup-for-kioptrix-level-1/
+2. https://www.abatchy.com/2016/11/kioptrix-1-walkthrough-vulnhub
